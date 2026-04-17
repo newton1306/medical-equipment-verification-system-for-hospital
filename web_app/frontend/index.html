@@ -38,18 +38,25 @@
 
             <!-- Camera options -->
             <div id="capture-options" class="capture-options">
-                <!-- File/Camera input (works on mobile) -->
-                <label for="camera-input" class="capture-btn">
-                    <span class="capture-icon">📷</span>
-                    <span>ถ่ายภาพ / เลือกไฟล์</span>
+                <!-- Mobile Native Camera -->
+                <label for="mobile-camera-input" class="capture-btn">
+                    <span class="capture-icon">📱</span>
+                    <span>เปิดกล้องมือถือ</span>
                 </label>
-                <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden-input">
+                <input type="file" id="mobile-camera-input" accept="image/*" capture="environment" class="hidden-input">
 
-                <!-- WebRTC camera (works on desktop) -->
+                <!-- WebRTC camera (works on desktop/HTTPS) -->
                 <button id="btn-webcam" class="capture-btn" onclick="startWebcam()">
-                    <span class="capture-icon">🎥</span>
-                    <span>เปิดกล้อง (Webcam)</span>
+                    <span class="capture-icon">💻</span>
+                    <span>เปิดกล้องเว็บแคม</span>
                 </button>
+
+                <!-- File Picker / Gallery -->
+                <label for="file-upload-input" class="capture-btn">
+                    <span class="capture-icon">📂</span>
+                    <span>เลือกรูปภาพ</span>
+                </label>
+                <input type="file" id="file-upload-input" accept="image/*" class="hidden-input">
             </div>
 
             <!-- Webcam live view -->

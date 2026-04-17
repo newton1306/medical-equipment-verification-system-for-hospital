@@ -18,7 +18,8 @@ const stepCapture = document.getElementById('step-capture');
 const stepTrayPreview = document.getElementById('step-tray-preview');
 const stepProcessing = document.getElementById('step-processing');
 const stepResults = document.getElementById('step-results');
-const cameraInput = document.getElementById('camera-input');
+const mobileCameraInput = document.getElementById('mobile-camera-input');
+const fileUploadInput = document.getElementById('file-upload-input');
 const previewContainer = document.getElementById('preview-container');
 const previewImage = document.getElementById('preview-image');
 const btnRetake = document.getElementById('btn-retake');
@@ -79,7 +80,7 @@ function renderChecklist() {
 }
 
 // ── File/Camera input ──
-cameraInput.addEventListener('change', (e) => {
+function handleFileInput(e) {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
@@ -90,7 +91,11 @@ cameraInput.addEventListener('change', (e) => {
         });
     };
     reader.readAsDataURL(file);
-});
+    e.target.value = ''; // Reset input to allow selecting same file again
+}
+
+mobileCameraInput.addEventListener('change', handleFileInput);
+fileUploadInput.addEventListener('change', handleFileInput);
 
 function showPreview(src) {
     previewImage.src = src;
@@ -118,6 +123,12 @@ function resizeImage(dataUrl, maxSize, callback) {
 
 // ── Webcam (for desktop) ──
 async function startWebcam() {
+    // Check if browser allows webcam access (requires HTTPS or Localhost)
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('เบราว์เซอร์ไม่อนุญาตให้เปิดกล้องเว็ปแคมของระบบ!\n\nสาเหตุ: กำลังเข้าใช้งานผ่าน http:// (ไม่มีตัว S)\nกด OK แล้วใช้ปุ่ม "📱 เปิดกล้องมือถือ" หรือ "📂 เลือกรูปภาพ" แทนครับ');
+        return;
+    }
+
     try {
         webcamStream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
@@ -127,7 +138,7 @@ async function startWebcam() {
         document.getElementById('webcam-container').classList.remove('hidden');
         document.getElementById('capture-options').classList.add('hidden');
     } catch (e) {
-        alert('ไม่สามารถเปิดกล้องได้: ' + e.message);
+        alert('ไม่สามารถเปิดเว็บแคมได้: ' + e.message + '\nกรุณาใช้ปุ่มเลือกรูปหรือกล้องมือถือแทนครับ');
     }
 }
 
@@ -158,7 +169,8 @@ function resetCapture() {
     capturedImageBase64 = null;
     previewContainer.classList.add('hidden');
     document.getElementById('capture-options').classList.remove('hidden');
-    cameraInput.value = '';
+    mobileCameraInput.value = '';
+    fileUploadInput.value = '';
     stepTrayPreview.classList.add('hidden');
     stepResults.classList.add('hidden');
     stepProcessing.classList.add('hidden');
