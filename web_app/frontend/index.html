@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="description" content="AI Surgical Instrument Verification System">
+    <link rel="manifest" href="/manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <title>Equipment Verify — CSSD</title>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-brand">🏥 Equipment Verify</div>
+        <div class="nav-links">
+            <a href="/" class="nav-link active">ตรวจสอบ</a>
+            <a href="/admin" class="nav-link">จัดการ Set</a>
+            <a href="/dashboard" class="nav-link">Dashboard</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <!-- Step 1: Select Set -->
+        <section id="step-select" class="card">
+            <div class="step-badge">1</div>
+            <h2>เลือกชุดเครื่องมือ</h2>
+            <select id="set-selector" class="select-large">
+                <option value="">กำลังโหลด...</option>
+            </select>
+            <div id="checklist-preview" class="checklist-preview"></div>
+        </section>
+
+        <!-- Step 2: Capture -->
+        <section id="step-capture" class="card hidden">
+            <div class="step-badge">2</div>
+            <h2>ถ่ายภาพถาดเครื่องมือ</h2>
+
+            <!-- Camera options -->
+            <div id="capture-options" class="capture-options">
+                <!-- File/Camera input (works on mobile) -->
+                <label for="camera-input" class="capture-btn">
+                    <span class="capture-icon">📷</span>
+                    <span>ถ่ายภาพ / เลือกไฟล์</span>
+                </label>
+                <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden-input">
+
+                <!-- WebRTC camera (works on desktop) -->
+                <button id="btn-webcam" class="capture-btn" onclick="startWebcam()">
+                    <span class="capture-icon">🎥</span>
+                    <span>เปิดกล้อง (Webcam)</span>
+                </button>
+            </div>
+
+            <!-- Webcam live view -->
+            <div id="webcam-container" class="webcam-container hidden">
+                <video id="webcam-video" autoplay playsinline></video>
+                <div class="webcam-actions">
+                    <button class="btn btn-outline" onclick="stopWebcam()">ยกเลิก</button>
+                    <button class="btn btn-primary" onclick="captureWebcam()">📸 ถ่าย</button>
+                </div>
+            </div>
+
+            <!-- Preview -->
+            <div id="preview-container" class="preview-container hidden">
+                <img id="preview-image" alt="Preview">
+                <div class="preview-actions">
+                    <button id="btn-retake" class="btn btn-outline">ถ่ายใหม่</button>
+                    <button id="btn-detect" class="btn btn-primary">🔍 ตรวจจับถาด</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 2.5: Tray Detection Preview -->
+        <section id="step-tray-preview" class="card hidden">
+            <div class="step-badge" style="background:#f59e0b">!</div>
+            <h2>ตรวจสอบการตรวจจับถาด</h2>
+            <p class="tray-hint">เส้นสีเขียว = เส้นแบ่งช่อง — ถูกต้องหรือไม่?</p>
+            <div id="tray-preview-img" class="tray-preview-img"></div>
+            <div id="tray-compartments" class="compartment-grid"></div>
+            <div class="preview-actions" style="margin-top:12px">
+                <button class="btn btn-outline" onclick="backToCapture()">📷 ถ่ายใหม่</button>
+                <button class="btn btn-primary" id="btn-verify">✅ ตรวจสอบเครื่องมือ</button>
+            </div>
+        </section>
+
+        <!-- Step 3: Processing -->
+        <section id="step-processing" class="card hidden">
+            <div class="loader-container">
+                <div class="loader"></div>
+                <p class="loader-text">กำลังตรวจสอบ...</p>
+                <p class="loader-sub" id="processing-status">Calling Gemini AI...</p>
+            </div>
+        </section>
+
+        <!-- Step 4: Results -->
+        <section id="step-results" class="card hidden">
+            <div class="step-badge">3</div>
+            <h2>ผลการตรวจสอบ</h2>
+
+            <div id="result-banner" class="result-banner">
+                <span id="result-status" class="result-status"></span>
+                <span id="result-confidence" class="result-confidence"></span>
+            </div>
+
+            <div id="compartment-grid" class="compartment-grid"></div>
+            <div id="items-table-container" class="items-table-container"></div>
+            <div id="missing-extra" class="missing-extra"></div>
+            <div id="result-reason" class="result-reason"></div>
+            <div id="result-meta" class="result-meta"></div>
+
+            <!-- Debug info (collapsed) -->
+            <details class="debug-details">
+                <summary>🔧 Debug Info</summary>
+                <pre id="debug-info" class="debug-pre"></pre>
+            </details>
+
+            <!-- WARNINGS -->
+            <div class="warnings-section">
+                <div class="warning-card warning-caution">
+                    <div class="warning-icon">⚠️</div>
+                    <div class="warning-text">
+                        <strong>ระวัง! อย่าลืมกระดาษทดสอบสาร (Chemical Indicator)</strong>
+                        <p>ตรวจสอบว่าใส่แล้วก่อนห่อ — AI ไม่ได้ตรวจสอบชิ้นนี้</p>
+                    </div>
+                </div>
+                <div class="warning-card warning-important">
+                    <div class="warning-icon">🔍</div>
+                    <div class="warning-text">
+                        <strong>กรุณาเช็คอุปกรณ์ที่คล้ายกันอีกครั้งด้วยตนเอง</strong>
+                        <p>เช่น Tooth vs Non-tooth forceps, Mayo vs Metzenbaum scissors<br>
+                        ผลจาก AI เป็นเพียงตัวช่วย ไม่ใช่การตรวจสอบขั้นสุดท้าย</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-actions">
+                <button id="btn-next" class="btn btn-primary btn-large">🔄 ตรวจ Set ถัดไป</button>
+            </div>
+        </section>
+    </main>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>

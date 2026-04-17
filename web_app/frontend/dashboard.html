@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f172a">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <title>Dashboard — Equipment Verify</title>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-brand">🏥 Equipment Verify</div>
+        <div class="nav-links">
+            <a href="/" class="nav-link">ตรวจสอบ</a>
+            <a href="/admin" class="nav-link">จัดการ Set</a>
+            <a href="/dashboard" class="nav-link active">Dashboard</a>
+        </div>
+    </nav>
+    <main class="container">
+        <h1 style="font-size:1.3rem;margin-bottom:16px">📊 Dashboard</h1>
+
+        <div class="stats-grid" id="stats-grid">
+            <div class="stat-card"><div class="stat-value">-</div><div class="stat-label">Total</div></div>
+            <div class="stat-card"><div class="stat-value pass">-</div><div class="stat-label">Pass</div></div>
+            <div class="stat-card"><div class="stat-value fail">-</div><div class="stat-label">Fail</div></div>
+            <div class="stat-card"><div class="stat-value">-</div><div class="stat-label">Pass Rate</div></div>
+        </div>
+
+        <div class="card">
+            <h2 style="padding-left:0">Recent Verifications</h2>
+            <div id="recent-logs"></div>
+        </div>
+    </main>
+    <script>
+    async function loadDashboard() {
+        try {
+            const res = await fetch('/api/dashboard');
+            const d = await res.json();
+            const grid = document.getElementById('stats-grid');
+            grid.innerHTML = `
+                <div class="stat-card"><div class="stat-value">${d.total}</div><div class="stat-label">Total</div></div>
+                <div class="stat-card"><div class="stat-value pass">${d.pass_count}</div><div class="stat-label">Pass</div></div>
+                <div class="stat-card"><div class="stat-value fail">${d.fail_count}</div><div class="stat-label">Fail</div></div>
+                <div class="stat-card"><div class="stat-value">${d.pass_rate}%</div><div class="stat-label">Pass Rate</div></div>`;
+
+            const logs = document.getElementById('recent-logs');
+            if (!d.recent_logs || d.recent_logs.length === 0) {
+                logs.innerHTML = '<p style="color:var(--text-muted);padding:20px;text-align:center">ยังไม่มีข้อมูล</p>';
+                return;
+            }
+            logs.innerHTML = d.recent_logs.map(l => {
+                const status = (l.status || 'unknown').toLowerCase();
+                const time = l.created_at ? new Date(l.created_at).toLocaleString('th-TH') : '';
+                return `<div class="log-item">
+                    <div>
+                        <strong>${l.set_id}</strong>
+                        <div style="font-size:0.7rem;color:var(--text-muted)">${time} · ${l.model_used || ''} · ${l.elapsed_sec || 0}s</div>
+                    </div>
+                    <span class="log-status ${status}">${l.status}</span>
+                </div>`;
+            }).join('');
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    document.addEventListener('DOMContentLoaded', loadDashboard);
+    </script>
+</body>
+</html>
