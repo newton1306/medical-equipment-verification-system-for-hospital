@@ -23,6 +23,7 @@ const fileUploadInput = document.getElementById('file-upload-input');
 const previewContainer = document.getElementById('preview-container');
 const previewImage = document.getElementById('preview-image');
 const btnRetake = document.getElementById('btn-retake');
+const btnRotate = document.getElementById('btn-rotate');
 const btnDetect = document.getElementById('btn-detect');
 const btnVerify = document.getElementById('btn-verify');
 const btnNext = document.getElementById('btn-next');
@@ -238,6 +239,24 @@ function backToCapture() {
     stepCapture.classList.remove('hidden');
     resetCapture();
 }
+
+// ── Rotate Image ──
+btnRotate.addEventListener('click', () => {
+    if (!capturedImageBase64) return;
+    const img = new Image();
+    img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.height;
+        canvas.height = img.width;
+        const ctx = canvas.getContext('2d');
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(Math.PI / 2); // 90 deg right
+        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+        capturedImageBase64 = canvas.toDataURL('image/jpeg', 0.85);
+        previewImage.src = capturedImageBase64;
+    };
+    img.src = capturedImageBase64;
+});
 
 // Tray State
 let trayData = null;
