@@ -1,0 +1,29 @@
+name: Sync to Hugging Face
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web_app/**'  # ทำงานเฉพาะเมื่อมีการแก้ไขไฟล์ในโฟลเดอร์ web_app
+  workflow_dispatch:  # เอาไว้กดสั่งรันด้วยตัวเองได้ด้วย
+
+jobs:
+  sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # ต้องโหลดประวัติ git ทั้งหมดเพื่อให้ git subtree ทำงานได้
+      
+      - name: Push web_app folder to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          # ผูกบัญชี Hugging Face
+          git remote add space https://zonewtonx:${HF_TOKEN}@huggingface.co/spaces/zonewtonx/phusinghos-equip-verify
+          # ดึงเฉพาะโฟลเดอร์ web_app ออกมาเป็น root แล้วบังคับทับ (force push) ไปยัง Hugging Face
+          git subtree split --prefix web_app -b hf-deploy
+          git push -f space hf-deploy:main
