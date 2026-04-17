@@ -57,12 +57,15 @@ echo     webcam, your browser will say "Your connection is not private"
 echo.
 echo     You MUST click: "Advanced" -^> "Proceed to %LOCAL_IP% (unsafe)"
 echo.
-echo [2] OPEN BROWSER ON ANY DEVICE TO THIS LINK:
+echo [2] OPEN BROWSER ON ANY DEVICE ON WIFI (HTTPS):
 if "%LOCAL_IP%"=="" (
     echo     https://[YOUR-IP-ADDRESS]:8000
 ) else (
     echo     https://%LOCAL_IP%:8000
 )
+echo.
+echo [3] CLOUD / INTERNET (Hugging Face Space):
+echo     https://huggingface.co/spaces/zonewtonx/phusinghos-equip-verify
 echo.
 echo Press CTRL+C to stop the server
 echo.

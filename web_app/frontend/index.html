@@ -13,6 +13,17 @@
 </head>
 
 <body>
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="login-overlay hidden">
+        <div class="login-card">
+            <h2>🔒 เข้าสู่ระบบ</h2>
+            <p>กรุณาใส่รหัสผ่านเพื่อใช้งานระบบตรวจสอบอุปกรณ์</p>
+            <input type="password" id="login-password" placeholder="รหัสผ่าน" class="select-large" style="margin:1rem 0;">
+            <button id="btn-login" class="btn btn-primary btn-large">เข้าสู่ระบบ</button>
+            <p id="login-error" style="color:#ef4444; margin-top:1rem;"></p>
+        </div>
+    </div>
+
     <nav class="nav">
         <div class="nav-brand">🏥 Equipment Verify</div>
         <div class="nav-links">
@@ -26,11 +37,13 @@
         <!-- Step 1: Select Set -->
         <section id="step-select" class="card">
             <div class="step-badge">1</div>
-            <h2>เลือกชุดเครื่องมือ</h2>
-            <select id="set-selector" class="select-large">
-                <option value="">กำลังโหลด...</option>
-            </select>
-            <div id="checklist-preview" class="checklist-preview"></div>
+            <div class="step-content">
+                <div id="set-grid" class="set-grid">
+                    <!-- Cards injected by JS -->
+                    <div style="text-align:center; padding: 2rem; color: var(--text-muted)">กำลังโหลด...</div>
+                </div>
+                <div id="checklist-preview" class="checklist-preview"></div>
+            </div>
         </section>
 
         <!-- Step 2: Capture -->

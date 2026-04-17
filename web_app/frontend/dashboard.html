@@ -35,7 +35,15 @@
     <script>
     async function loadDashboard() {
         try {
-            const res = await fetch('/api/dashboard');
+            const appPw = localStorage.getItem('appPw') || '';
+            const res = await fetch('/api/dashboard', {
+                headers: { 'X-App-Password': appPw }
+            });
+            if (res.status === 401) {
+                alert('โปรดเข้าสู่ระบบจากหน้าหลัก');
+                window.location.href = '/';
+                return;
+            }
             const d = await res.json();
             const grid = document.getElementById('stats-grid');
             grid.innerHTML = `
@@ -52,12 +60,32 @@
             logs.innerHTML = d.recent_logs.map(l => {
                 const status = (l.status || 'unknown').toLowerCase();
                 const time = l.created_at ? new Date(l.created_at).toLocaleString('th-TH') : '';
-                return `<div class="log-item">
-                    <div>
-                        <strong>${l.set_id}</strong>
-                        <div style="font-size:0.7rem;color:var(--text-muted)">${time} · ${l.model_used || ''} · ${l.elapsed_sec || 0}s</div>
+                let detailsHtml = '';
+                
+                try {
+                    if (l.vlm_response) {
+                        const vlm = JSON.parse(l.vlm_response);
+                        if (status === 'pass') {
+                            detailsHtml = `<div style="font-size:0.75rem; color:var(--success); margin-top:4px;">✨ อุปกรณ์ครบถ้วน (ไม่ต้องแก้ไข)</div>`;
+                        } else if (status === 'fail') {
+                            const missing = vlm.missing?.length ? `ขาด: ${vlm.missing.join(', ')}` : '';
+                            const extra = vlm.extra?.length ? `เกิน: ${vlm.extra.join(', ')}` : '';
+                            detailsHtml = `<div style="font-size:0.75rem; color:var(--danger); margin-top:4px;">⚠️ ต้องแก้ไข: ${missing} ${extra}</div>`;
+                        } else {
+                            detailsHtml = `<div style="font-size:0.75rem; color:var(--warning); margin-top:4px;">⚠️ กำกวม: ${vlm.reason || ''}</div>`;
+                        }
+                    }
+                } catch(e) {}
+
+                return `<div class="log-item" style="display:flex; flex-direction:column; align-items:flex-start;">
+                    <div style="display:flex; justify-content:space-between; width:100%; align-items:flex-start;">
+                        <div>
+                            <strong style="font-size:0.95rem">${l.set_id}</strong>
+                            <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">${time} · ${l.model_used || 'AI'} · ${l.elapsed_sec || 0}s</div>
+                        </div>
+                        <span class="log-status ${status}">${l.status}</span>
                     </div>
-                    <span class="log-status ${status}">${l.status}</span>
+                    ${detailsHtml}
                 </div>`;
             }).join('');
         } catch (e) {

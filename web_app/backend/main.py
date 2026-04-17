@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from backend.config import ALLOWED_ORIGINS
+from backend.config import ALLOWED_ORIGINS, APP_PASSWORD
 from backend.models import DEFAULT_WARNINGS, VerifyResponse, Warning
 from backend import database as db
 from backend.services.tray_detector import (
@@ -22,7 +22,16 @@ from backend.services.tray_detector import (
 )
 from backend.services.vlm_verifier import verify_with_vlm
 
-app = FastAPI(title='Surgical Instrument Verification', version='3.0')
+app = FastAPI(title='Surgical Instrument Verification', version='4.0')
+
+@app.middleware("http")
+async def check_password(request, call_next):
+    if APP_PASSWORD and request.url.path.startswith("/api/") and request.url.path != "/api/login":
+        pwd = request.headers.get("X-App-Password", "")
+        if pwd != APP_PASSWORD:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+    return await call_next(request)
 
 app.add_middleware(
     CORSMiddleware,
@@ -62,7 +71,7 @@ async def detect_tray_preview(payload: dict):
     """Detect tray and show compartments for user confirmation.
 
     Input: { "image_base64": "..." }
-    Output: tray preview, compartment previews, divider coords.
+    Output: tray preview, compartment previews, dividers, corners.
     """
     image_b64 = payload.get('image_base64', '')
     if not image_b64:
@@ -70,13 +79,15 @@ async def detect_tray_preview(payload: dict):
 
     try:
         image = _decode_image(image_b64)
-        tray, compartments, vx, hy, method = process_tray_image(image)
-
-        # Draw divider lines on tray preview
-        tray_annotated = tray.copy()
-        th, tw = tray_annotated.shape[:2]
-        cv2.line(tray_annotated, (vx, 0), (vx, th), (0, 255, 0), 2)
-        cv2.line(tray_annotated, (0, hy), (vx, hy), (0, 255, 0), 2)
+        from backend.services.tray_detector import detect_tray, crop_tray, split_compartments
+        
+        corners = detect_tray(image)
+        if corners is None:
+            raise ValueError('Could not auto-detect tray.')
+            
+        tray = crop_tray(image, corners)
+        compartments, vx, hy = split_compartments(tray)
+        th, tw = tray.shape[:2]
 
         comp_previews = {}
         for name, comp_img in compartments.items():
@@ -85,15 +96,17 @@ async def detect_tray_preview(payload: dict):
 
         return {
             'success': True,
-            'method': method,
-            'tray_preview': _encode_image(tray_annotated, 600),
+            'method': 'auto',
+            'tray_preview': _encode_image(tray, 600),
             'compartment_previews': comp_previews,
             'dividers': {'vert_x': vx, 'horiz_y': hy},
             'tray_size': {'w': tw, 'h': th},
+            'corners': corners.tolist()
         }
     except ValueError as e:
         return {'success': False, 'error': str(e)}
     except Exception as e:
+        import traceback
         traceback.print_exc()
         return {'success': False, 'error': f'Detection failed: {str(e)[:200]}'}
 
@@ -104,7 +117,7 @@ async def detect_tray_preview(payload: dict):
 async def verify_tray(payload: dict):
     """Main verification endpoint.
 
-    Input: { "set_id": "...", "image_base64": "..." }
+    Input: { "set_id": "...", "image_base64": "...", "corners": [...], "manual_dividers": {...} }
     Output: VerifyResponse with status, items, warnings, previews.
     """
     set_id = payload.get('set_id', '')
@@ -121,9 +134,23 @@ async def verify_tray(payload: dict):
     try:
         # Decode image
         image = _decode_image(image_b64)
+        from backend.services.tray_detector import process_tray_image, crop_tray, extract_manual_compartments
+        import numpy as np
 
+        corners = payload.get('corners')
+        manual_dividers = payload.get('manual_dividers')
+        
         # Step 1: Detect tray + split compartments
-        tray, compartments, vx, hy, method = process_tray_image(image)
+        if corners and manual_dividers:
+            # Validate and use manual coordinates
+            corners_arr = np.array(corners, dtype=int)
+            tray = crop_tray(image, corners_arr)
+            vx = max(5, min(tray.shape[1]-5, int(manual_dividers.get('vert_x', tray.shape[1]//2))))
+            hy = max(5, min(tray.shape[0]-5, int(manual_dividers.get('horiz_y', tray.shape[0]//2))))
+            compartments = extract_manual_compartments(tray, vx, hy)
+            method = 'manual'
+        else:
+            tray, compartments, vx, hy, method = process_tray_image(image)
 
         # Step 2: Stage 1 sanity check
         s1 = stage1_sanity_check(tray, compartments)
@@ -238,7 +265,15 @@ async def delete_set(set_id: str):
     return {'ok': True}
 
 
-# ── Dashboard ──
+# ── Auth & Dashboard ──
+
+@app.post('/api/login')
+async def do_login(payload: dict):
+    if not APP_PASSWORD:
+        return {'success': True}
+    if payload.get('password') == APP_PASSWORD:
+        return {'success': True}
+    return {'success': False, 'error': 'รหัสผ่านไม่ถูกต้อง'}
 
 @app.get('/api/dashboard')
 async def dashboard():

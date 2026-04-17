@@ -28,46 +28,103 @@ const btnVerify = document.getElementById('btn-verify');
 const btnNext = document.getElementById('btn-next');
 const processingStatus = document.getElementById('processing-status');
 
+// Auth
+let appPassword = localStorage.getItem('appPw') || '';
+const loginOverlay = document.getElementById('login-overlay');
+const loginPwd = document.getElementById('login-password');
+const btnLogin = document.getElementById('btn-login');
+const loginErr = document.getElementById('login-error');
+
+async function apiFetch(url, options = {}) {
+    options.headers = options.headers || {};
+    options.headers['X-App-Password'] = appPassword;
+    const res = await fetch(url, options);
+    if (res.status === 401) {
+        showLogin();
+        throw new Error('Unauthorized');
+    }
+    return res;
+}
+
+function showLogin() {
+    loginOverlay.classList.remove('hidden');
+}
+
+btnLogin.addEventListener('click', async () => {
+    const pwd = loginPwd.value;
+    try {
+        const res = await fetch(API + '/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: pwd })
+        });
+        const data = await res.json();
+        if (data.success) {
+            appPassword = pwd;
+            localStorage.setItem('appPw', pwd);
+            loginOverlay.classList.add('hidden');
+            init(); // reload data
+        } else {
+            loginErr.textContent = data.error || 'รหัสไม่ถูกต้อง';
+        }
+    } catch(e) {
+        loginErr.textContent = 'การเชื่อมต่อผิดพลาด';
+    }
+});
+
+
 // ── Init ──
 async function init() {
     try {
-        const res = await fetch(API + '/api/sets');
+        const res = await apiFetch(API + '/api/sets');
         sets = await res.json();
         renderSetSelector();
     } catch (e) {
-        console.error('Failed to load sets:', e);
-        setSelector.innerHTML = '<option value="">Error loading sets</option>';
+        if (e.message !== 'Unauthorized') {
+            console.error('Failed to load sets:', e);
+            setSelector.innerHTML = '<option value="">Error loading sets</option>';
+        }
     }
 }
+
+const setGrid = document.getElementById('set-grid');
 
 function renderSetSelector() {
     if (sets.length === 0) {
-        setSelector.innerHTML = '<option value="">ไม่มี set — กรุณาเพิ่มใน Admin</option>';
+        setGrid.innerHTML = '<div style="text-align:center; padding: 2rem; color: var(--text-muted)">ไม่มี set — กรุณาเพิ่มใน Admin</div>';
         return;
     }
-    let html = '<option value="">-- เลือก Set --</option>';
+    let html = '';
     for (const s of sets) {
-        const th = s.display_name_th ? ` (${s.display_name_th})` : '';
+        const th = s.display_name_th ? `<br><span style="font-size:0.75rem; color:var(--text-muted)">${s.display_name_th}</span>` : '';
         const n = (s.checklist || []).length;
-        html += `<option value="${s.id}">${s.display_name}${th} — ${n} items</option>`;
+        const icon = '📦'; // Default icon, can be extended if needed
+        html += `
+            <div class="set-card" data-id="${s.id}">
+                <span class="set-icon">${icon}</span>
+                <div class="set-name">${s.display_name}${th}</div>
+                <div class="set-count">${n} items</div>
+            </div>`;
     }
-    setSelector.innerHTML = html;
-}
+    setGrid.innerHTML = html;
 
-// ── Set selection ──
-setSelector.addEventListener('change', () => {
-    const id = setSelector.value;
-    if (!id) {
-        selectedSet = null;
-        checklistPreview.innerHTML = '';
-        stepCapture.classList.add('hidden');
-        return;
-    }
-    selectedSet = sets.find(s => s.id === id);
-    renderChecklist();
-    stepCapture.classList.remove('hidden');
-    resetCapture();
-});
+    // Add click listeners
+    const cards = setGrid.querySelectorAll('.set-card');
+    cards.forEach(card => {
+        card.addEventListener('click', () => {
+            cards.forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+            
+            const id = card.getAttribute('data-id');
+            selectedSet = sets.find(s => s.id === id);
+            renderChecklist();
+            stepCapture.classList.remove('hidden');
+            resetCapture();
+            // Scroll to capture section
+            stepCapture.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+}
 
 function renderChecklist() {
     if (!selectedSet) return;
@@ -182,16 +239,22 @@ function backToCapture() {
     resetCapture();
 }
 
+// Tray State
+let trayData = null;
+let currentDividers = null;
+
 // ── Step 2.5: Detect Tray ──
 btnDetect.addEventListener('click', async () => {
     if (!capturedImageBase64) return;
 
     stepCapture.classList.add('hidden');
+    btnDetect.disabled = true;
+    btnDetect.textContent = 'กำลังประมวลผล...';
     stepProcessing.classList.remove('hidden');
     processingStatus.textContent = 'Detecting tray...';
 
     try {
-        const res = await fetch(API + '/api/detect-tray', {
+        const res = await apiFetch(API + '/api/detect-tray', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ image_base64: capturedImageBase64 }),
@@ -204,7 +267,9 @@ btnDetect.addEventListener('click', async () => {
             throw new Error(`เซิร์ฟเวอร์ตอบกลับผิดพลาด (น่าจะ Server เต็ม/ล่ม): ${textRes.substring(0, 50)}`);
         }
 
-        stepProcessing.classList.add('hidden');
+        stepProcessing.classList.remove('hidden');
+        btnDetect.disabled = false;
+        btnDetect.textContent = 'Detect Tray';
 
         if (!data.success) {
             alert('ตรวจจับถาดไม่ได้: ' + (data.error || 'Unknown error') + '\nลองถ่ายใหม่ให้เห็นถาดชัดๆ');
@@ -212,9 +277,26 @@ btnDetect.addEventListener('click', async () => {
             return;
         }
 
-        // Show tray preview
-        document.getElementById('tray-preview-img').innerHTML =
-            `<img src="data:image/jpeg;base64,${data.tray_preview}" alt="Detected tray" style="max-width:100%;border-radius:8px;border:1px solid var(--border)">`;
+        // Save tray data
+        trayData = data;
+        currentDividers = { ...data.dividers };
+
+        // Show tray preview with draggable lines
+        const container = document.getElementById('tray-preview-img');
+        const imgW = data.tray_size.w;
+        const imgH = data.tray_size.h;
+        const vPct = (currentDividers.vert_x / imgW) * 100;
+        const hPct = (currentDividers.horiz_y / imgH) * 100;
+
+        container.innerHTML = `
+            <div class="tray-preview-container" id="tray-container">
+                <div class="tray-preview-img"><img src="data:image/jpeg;base64,${data.tray_preview}" alt="Detected tray" draggable="false"></div>
+                <div id="div-v" class="divider divider-v" style="left: ${vPct}%;"></div>
+                <div id="div-h" class="divider divider-h" style="top: ${hPct}%; right: ${100 - vPct}%;"></div>
+            </div>
+        `;
+
+        setupDraggableDividers();
 
         const grid = document.getElementById('tray-compartments');
         grid.innerHTML = '';
@@ -231,9 +313,59 @@ btnDetect.addEventListener('click', async () => {
     } catch (e) {
         stepProcessing.classList.add('hidden');
         stepCapture.classList.remove('hidden');
+        btnDetect.disabled = false;
+        btnDetect.textContent = 'Detect Tray';
         alert('Error: ' + e.message);
     }
 });
+
+function setupDraggableDividers() {
+    const container = document.getElementById('tray-container');
+    const divV = document.getElementById('div-v');
+    const divH = document.getElementById('div-h');
+    
+    let isDraggingV = false;
+    let isDraggingH = false;
+
+    function getX(e) { return e.touches ? e.touches[0].clientX : e.clientX; }
+    function getY(e) { return e.touches ? e.touches[0].clientY : e.clientY; }
+
+    function onDownV(e) { isDraggingV = true; e.preventDefault(); }
+    function onDownH(e) { isDraggingH = true; e.preventDefault(); }
+
+    function onMove(e) {
+        if (!isDraggingV && !isDraggingH) return;
+        const rect = container.getBoundingClientRect();
+        
+        if (isDraggingV) {
+            let x = getX(e) - rect.left;
+            x = Math.max(0, Math.min(x, rect.width));
+            const pct = (x / rect.width) * 100;
+            divV.style.left = pct + '%';
+            divH.style.right = (100 - pct) + '%';
+            currentDividers.vert_x = (pct / 100) * trayData.tray_size.w;
+        }
+        if (isDraggingH) {
+            let y = getY(e) - rect.top;
+            y = Math.max(0, Math.min(y, rect.height));
+            const pct = (y / rect.height) * 100;
+            divH.style.top = pct + '%';
+            currentDividers.horiz_y = (pct / 100) * trayData.tray_size.h;
+        }
+    }
+
+    function onUp() { isDraggingV = false; isDraggingH = false; }
+
+    divV.addEventListener('mousedown', onDownV);
+    divV.addEventListener('touchstart', onDownV, {passive: false});
+    divH.addEventListener('mousedown', onDownH);
+    divH.addEventListener('touchstart', onDownH, {passive: false});
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchmove', onMove, {passive: false});
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchend', onUp);
+}
 
 // ── Step 3: Verify with VLM ──
 btnVerify.addEventListener('click', async () => {
@@ -251,13 +383,20 @@ btnVerify.addEventListener('click', async () => {
     }, 2000);
 
     try {
-        const res = await fetch(API + '/api/verify', {
+        const payload = {
+            set_id: selectedSet.id,
+            image_base64: capturedImageBase64
+        };
+        
+        if (trayData && trayData.corners) {
+            payload.corners = trayData.corners;
+            payload.manual_dividers = currentDividers;
+        }
+
+        const res = await apiFetch(API + '/api/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                set_id: selectedSet.id,
-                image_base64: capturedImageBase64,
-            }),
+            body: JSON.stringify(payload)
         });
 
         clearInterval(interval);

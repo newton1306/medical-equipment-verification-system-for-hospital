@@ -17,5 +17,6 @@ SUPABASE_URL = os.getenv('SUPABASE_URL', '')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')
 
 # --- App ---
+APP_PASSWORD = os.getenv('APP_PASSWORD', '')
 MAX_IMAGE_SIZE = int(os.getenv('MAX_IMAGE_SIZE', '1920'))
 ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', '*').split(',')

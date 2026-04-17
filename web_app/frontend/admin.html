@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
     <link rel="stylesheet" href="/css/style.css">
     <title>Admin — Equipment Verify</title>
 </head>
+
 <body>
     <nav class="nav">
         <div class="nav-brand">🏥 Equipment Verify</div>
@@ -45,11 +47,22 @@
                 <label>Reference Image URL</label>
                 <input class="form-input" id="f-ref-url" placeholder="https://...">
             </div>
-            <div class="form-group">
-                <label>Checklist Items (JSON)</label>
-                <textarea class="form-input" id="f-checklist" rows="8" placeholder='[{"item_name":"Tooth forceps","quantity":1,"mode":"exact"}]'></textarea>
+            <div class="form-group" style="margin-top:20px; border-top:1px solid var(--border); padding-top:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+                    <label style="margin:0">Checklist อุปกรณ์</label>
+                    <div style="display:flex; gap: 8px;">
+                        <button class="btn btn-outline btn-sm" id="btn-toggle-json" onclick="toggleJsonMode()">สลับโหมด JSON</button>
+                        <button class="btn btn-outline btn-sm" id="btn-add-item" onclick="addChecklistItem()">+ เพิ่มอุปกรณ์</button>
+                    </div>
+                </div>
+                <!-- Form Mode -->
+                <div id="checklist-items-container" style="display:flex; flex-direction:column; gap:8px;">
+                    <!-- Items injected by JS -->
+                </div>
+                <!-- JSON Mode -->
+                <textarea class="form-input hidden" id="f-checklist" rows="8" placeholder='[{"item_name":"Tooth forceps","quantity":1,"mode":"exact"}]'></textarea>
             </div>
-            <div class="modal-actions">
+            <div class="modal-actions" style="margin-top:24px;">
                 <button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
                 <button class="btn btn-primary" id="btn-save" onclick="saveSet()">บันทึก</button>
             </div>
@@ -58,4 +71,5 @@
 
     <script src="/js/admin.js"></script>
 </body>
+
 </html>

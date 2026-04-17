@@ -151,6 +151,27 @@ def stage1_sanity_check(tray_image: np.ndarray, compartments: dict[str, np.ndarr
     return 'SEND_TO_VLM'
 
 
+def extract_manual_compartments(tray_image: np.ndarray, vert_x: int, horiz_y: int) -> dict[str, np.ndarray]:
+    """Extract compartments using manually provided coordinates."""
+    h, w = tray_image.shape[:2]
+    pad = 5
+    compartments: dict[str, np.ndarray] = {}
+
+    st = tray_image[pad:horiz_y - pad, pad:vert_x - pad]
+    if st.size > 0:
+        compartments['small_top'] = st
+
+    sb = tray_image[horiz_y + pad:h - pad, pad:vert_x - pad]
+    if sb.size > 0:
+        compartments['small_bottom'] = sb
+
+    lg = tray_image[pad:h - pad, vert_x + pad:w - pad]
+    if lg.size > 0:
+        compartments['large'] = lg
+
+    compartments['full'] = tray_image.copy()
+    return compartments
+
 def process_tray_image(image: np.ndarray) -> tuple[np.ndarray, dict[str, np.ndarray], int, int, str]:
     """Full pipeline: detect tray → crop → split compartments.
 
