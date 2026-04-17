@@ -184,7 +184,13 @@ btnDetect.addEventListener('click', async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ image_base64: capturedImageBase64 }),
         });
-        const data = await res.json();
+        let data;
+        const textRes = await res.text();
+        try {
+            data = JSON.parse(textRes);
+        } catch (e) {
+            throw new Error(`เซิร์ฟเวอร์ตอบกลับผิดพลาด (น่าจะ Server เต็ม/ล่ม): ${textRes.substring(0, 50)}`);
+        }
 
         stepProcessing.classList.add('hidden');
 
@@ -244,12 +250,17 @@ btnVerify.addEventListener('click', async () => {
 
         clearInterval(interval);
 
-        if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.detail || 'Verification failed');
+        const textRes = await res.text();
+        let data;
+        try {
+            data = JSON.parse(textRes);
+        } catch (e) {
+            throw new Error(`เซิร์ฟเวอร์ตอบกลับผิดพลาด (น่าจะ Server เต็ม/ล่ม): ${textRes.substring(0, 50)}`);
         }
 
-        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.detail || 'Verification failed');
+        }
         renderResults(data);
 
     } catch (e) {

@@ -1,16 +1,24 @@
-FROM python:3.11-slim
+# ใช้ Python 3.12 รุ่นเบา
+FROM python:3.12-slim
 
+# สร้าง User เฉพาะสำหรับ Hugging Face (บังคับ)
+RUN useradd -m -u 1000 user
+
+# กำหนดพื้นที่ทำงาน
 WORKDIR /app
 
-# Install system deps for OpenCV
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1-mesa-glx libglib2.0-0 && \
-    rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
+# ก๊อปปี้และติดตั้ง requirements (ไม่ต้องใช้ apt-get แล้ว)
+COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# ก๊อปปี้ไฟล์ทั้งหมดของแอปเรา และมอบสิทธิ์ให้ user
+COPY --chown=user . /app
 
-EXPOSE 8000
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# สลับไปใช้ user ที่สร้าง
+USER user
+
+# แจ้งว่าใช้พอร์ต 7860
+EXPOSE 7860
+
+# คำสั่งเปิดเซิร์ฟเวอร์
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "7860"]
