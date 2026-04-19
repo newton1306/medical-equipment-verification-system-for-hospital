@@ -132,14 +132,13 @@ function renderChecklist() {
     if (!selectedSet) return;
     const items = selectedSet.checklist || [];
     
-    const uiItems = items.map(i => {
+    checklistPreview.innerHTML = items.map(i => {
         let nName = i.item_name;
-        if (i.item_name_th) nName += ` <span style="font-size:0.8rem; color:var(--text-muted)">(${i.item_name_th})</span>`;
-        const qtyStr = i.mode === 'exact' ? `${i.quantity}x ` : '';
-        return `<li style="margin-bottom:4px; margin-left:20px; list-style-type:disc; color:var(--text-light);">${qtyStr}${nName} ${i.mode === 'present' ? '<span style="font-size:0.7rem; color:min(--text-muted)">[ไม่ต้องนับจำนวน]</span>' : ''}</li>`;
+        if (i.item_name_th) nName += ` <span>(${i.item_name_th})</span>`;
+        const cls = i.mode === 'exact' ? 'exact' : 'present';
+        const label = i.mode === 'exact' ? `${i.quantity}x ${nName}` : `${nName} ✓`;
+        return `<span class="checklist-chip ${cls}">${label}</span>`;
     }).join('');
-    
-    checklistPreview.innerHTML = `<ul style="margin:0; padding:0; font-size:0.9rem;">${uiItems}</ul>`;
 }
 
 // ── File/Camera input ──
@@ -231,7 +230,7 @@ btnRetake.addEventListener('click', resetCapture);
 function resetCapture() {
     capturedImageBase64 = null;
     previewContainer.classList.add('hidden');
-    document.getElementById('capture-options').classList.add('hidden');
+    document.getElementById('capture-options').classList.remove('hidden');
     mobileCameraInput.value = '';
     fileUploadInput.value = '';
     stepTrayPreview.classList.add('hidden');
