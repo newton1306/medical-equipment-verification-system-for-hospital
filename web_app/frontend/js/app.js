@@ -11,7 +11,6 @@ let capturedImageBase64 = null;
 let webcamStream = null;
 
 // DOM
-const setSelector = document.getElementById('set-selector');
 const checklistPreview = document.getElementById('checklist-preview');
 const stepSelect = document.getElementById('step-select');
 const stepCapture = document.getElementById('step-capture');
@@ -80,11 +79,19 @@ async function init() {
     try {
         const res = await apiFetch(API + '/api/sets');
         sets = await res.json();
+        if (!Array.isArray(sets)) {
+            throw new Error(sets.detail || 'Invalid response from server');
+        }
         renderSetSelector();
     } catch (e) {
         if (e.message !== 'Unauthorized') {
             console.error('Failed to load sets:', e);
-            setSelector.innerHTML = '<option value="">Error loading sets</option>';
+            const setGrid = document.getElementById('set-grid');
+            if (setGrid) {
+                setGrid.innerHTML = `<div style="text-align:center; padding: 2rem; color: #ef4444">
+                    ไม่สามารถโหลดข้อมูล Set ได้<br><span style="font-size:0.85rem; color:var(--text-muted)">${e.message}<br>โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ตหรือรีเฟรชหน้าบราวเซอร์</span>
+                </div>`;
+            }
         }
     }
 }

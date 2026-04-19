@@ -17,13 +17,17 @@ async function apiFetch(url, options = {}) {
 }
 
 async function loadSets() {
-    const res = await apiFetch(API + '/api/sets');
-    const sets = await res.json();
     const el = document.getElementById('sets-list');
-    if (sets.length === 0) {
-        el.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px">ยังไม่มี set — กด "+ เพิ่ม Set" ด้านบน</p>';
-        return;
-    }
+    try {
+        const res = await apiFetch(API + '/api/sets');
+        const sets = await res.json();
+        if (!Array.isArray(sets)) {
+            throw new Error(sets.detail || 'Invalid response from server');
+        }
+        if (sets.length === 0) {
+            el.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px">ยังไม่มี set — กด "+ เพิ่ม Set" ด้านบน</p>';
+            return;
+        }
     el.innerHTML = sets.map(s => {
         const n = (s.checklist || []).length;
         const items = (s.checklist || []).map(i => {
@@ -47,6 +51,12 @@ async function loadSets() {
             <div class="checklist-preview">${items}</div>
         </div>`;
     }).join('');
+    } catch (e) {
+        if (e.message !== 'Unauthorized') {
+            console.error(e);
+            el.innerHTML = `<p style="color:#ef4444;text-align:center;padding:40px">ไม่สามารถโหลดข้อมูล Set ได้: ${e.message}</p>`;
+        }
+    }
 }
 
 function openAddModal() {
