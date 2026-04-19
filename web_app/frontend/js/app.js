@@ -192,15 +192,21 @@ async function showPreview(src) {
         
         if (data.success) {
             boundaryOriginalSize = data.image_size;
-            previewImage.onload = () => {
-                bCanvas.width = previewImage.clientWidth;
-                bCanvas.height = previewImage.clientHeight;
+            const finalizePreview = () => {
+                previewContainer.classList.remove('hidden');
+                bCanvas.width = previewImage.clientWidth || previewImage.naturalWidth;
+                bCanvas.height = previewImage.clientHeight || previewImage.naturalHeight;
                 const scaleX = bCanvas.width / boundaryOriginalSize.w;
                 const scaleY = bCanvas.height / boundaryOriginalSize.h;
                 displayCorners = data.corners.map(c => ({ x: c[0] * scaleX, y: c[1] * scaleY }));
                 drawBoundary();
-                previewContainer.classList.remove('hidden');
             };
+
+            if (previewImage.complete && previewImage.naturalWidth !== 0) {
+                finalizePreview();
+            } else {
+                previewImage.onload = finalizePreview;
+            }
         } else {
             throw new Error(data.error);
         }
