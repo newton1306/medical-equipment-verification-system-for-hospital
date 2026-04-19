@@ -27,20 +27,31 @@ async def get_all_sets() -> list[dict]:
         r = await client.get(
             _url('instrument_sets'),
             headers=_headers(),
-            params={'select': '*', 'order': 'display_name.asc'},
+            params={'select': 'id,display_name,display_name_th,created_at,updated_at', 'order': 'display_name.asc'},
         )
         r.raise_for_status()
         sets = r.json()
 
-        # Fetch checklist items for each set
+        # Fetch all checklist items at once (prevent N+1 issue)
+        r2 = await client.get(
+            _url('checklist_items'),
+            headers=_headers(),
+            params={'select': '*'},
+        )
+        r2.raise_for_status()
+        all_items = r2.json()
+        
+        items_by_set = {}
+        for item in all_items:
+            sid = item['set_id']
+            if sid not in items_by_set:
+                items_by_set[sid] = []
+            items_by_set[sid].append(item)
+            
         for s in sets:
-            r2 = await client.get(
-                _url('checklist_items'),
-                headers=_headers(),
-                params={'select': '*', 'set_id': f'eq.{s["id"]}', 'order': 'sort_order.asc'},
-            )
-            r2.raise_for_status()
-            s['checklist'] = r2.json()
+            c = items_by_set.get(s['id'], [])
+            c.sort(key=lambda x: x.get('sort_order', 0))
+            s['checklist'] = c
 
         return sets
 
