@@ -97,7 +97,6 @@
                     <button class="btn btn-primary btn-large" id="btn-verify-direct" style="background-color: var(--success); width:100%">⚡ ตรวจสอบทันที (ส่งทั้งถาดจบงาน)</button>
                     <div style="display:flex; gap:8px; width:100%;">
                         <button class="btn btn-outline" id="btn-retake" style="flex:1">📷 ถ่ายใหม่</button>
-                        <button class="btn btn-outline" id="btn-rotate" style="flex:1">หมุน ↻</button>
                         <button class="btn btn-outline" id="btn-detect" style="flex:1">✂️ ตัดแบ่งช่อง (Option 2)</button>
                     </div>
                 </div>
@@ -114,9 +113,12 @@
             <p class="tray-hint" style="margin-bottom:8px;">เลื่อนจุดเส้นประเพื่อปรับเส้นแบ่งลากย่อย 3 ช่อง</p>
             <div id="tray-preview-img" class="tray-preview-img"></div>
             <div id="tray-compartments" class="compartment-grid"></div>
-            <div class="preview-actions" style="margin-top:12px; display:flex; gap:8px;">
-                <button class="btn btn-outline" id="btn-rotate-tray" style="flex:1">หมุน ↻</button>
-                <button class="btn btn-primary" id="btn-verify" style="flex:2">✅ ยืนยันตรวจสอบ</button>
+            <div class="preview-actions" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; gap:8px; width:100%;">
+                    <button class="btn btn-outline" onclick="backToCapture()" style="flex:1">📷 ถ่ายใหม่</button>
+                    <button class="btn btn-outline" id="btn-rotate-tray" style="flex:1">หมุน ↻</button>
+                </div>
+                <button class="btn btn-primary btn-large" id="btn-verify" style="width:100%">✅ ยืนยันตรวจสอบ</button>
             </div>
         </section>
 
@@ -170,8 +172,9 @@
                 </div>
             </div>
 
-            <div class="result-actions">
-                <button id="btn-next" class="btn btn-primary btn-large">🔄 ตรวจ Set ถัดไป</button>
+            <div class="result-actions" style="display:flex; flex-direction:column; gap:8px;">
+                <button id="btn-retake-result" class="btn btn-outline btn-large">📷 ถ่ายใหม่ (Set เดิม)</button>
+                <button id="btn-next" class="btn btn-primary btn-large">🔄 เลือก Set ถัดไป</button>
             </div>
         </section>
     </main>

@@ -22,7 +22,6 @@ const fileUploadInput = document.getElementById('file-upload-input');
 const previewContainer = document.getElementById('preview-container');
 const previewImage = document.getElementById('preview-image');
 const btnRetake = document.getElementById('btn-retake');
-const btnRotate = document.getElementById('btn-rotate');
 const btnDetect = document.getElementById('btn-detect');
 const btnVerifyDirect = document.getElementById('btn-verify-direct');
 const btnVerify = document.getElementById('btn-verify');
@@ -374,23 +373,6 @@ function backToCapture() {
     resetCapture();
 }
 
-// Rotate Image helper
-btnRotate.addEventListener('click', () => {
-    if (!capturedImageBase64) return;
-    const img = new Image();
-    img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.height;
-        canvas.height = img.width;
-        const ctx = canvas.getContext('2d');
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate(Math.PI / 2); // 90 deg right
-        ctx.drawImage(img, -img.width / 2, -img.height / 2);
-        capturedImageBase64 = canvas.toDataURL('image/jpeg', 0.85);
-        showPreview(capturedImageBase64); // rerun bounding box detection
-    };
-    img.src = capturedImageBase64;
-});
 
 // Helper: map corners back to original image size
 function getOriginalCorners() {
@@ -583,18 +565,6 @@ btnVerify.addEventListener('click', async () => {
     await executeVerify(payload);
 });
 
-btnVerifyDirect.addEventListener('click', async () => {
-    if (!selectedSet || !capturedImageBase64) return;
-    stepCapture.classList.add('hidden');
-    
-    const payload = {
-        set_id: selectedSet.id,
-        image_base64: capturedImageBase64,
-        skip_crop: true
-    };
-    
-    await executeVerify(payload);
-});
 
 async function executeVerify(payload) {
     stepProcessing.classList.remove('hidden');
@@ -713,10 +683,26 @@ function renderResults(data) {
     stepResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+// ── Retake (Same Set) ──
+const btnRetakeResult = document.getElementById('btn-retake-result');
+if (btnRetakeResult) {
+    btnRetakeResult.addEventListener('click', () => {
+        stepResults.classList.add('hidden');
+        stepCapture.classList.remove('hidden');
+        resetCapture();
+        stepCapture.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+}
+
 // ── Next ──
 btnNext.addEventListener('click', () => {
+    // Clear selected set
+    const cards = document.querySelectorAll('.set-card');
+    cards.forEach(c => c.classList.remove('active'));
+    selectedSet = null;
+
     stepResults.classList.add('hidden');
-    stepCapture.classList.remove('hidden');
+    stepCapture.classList.add('hidden');
     resetCapture();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 });
