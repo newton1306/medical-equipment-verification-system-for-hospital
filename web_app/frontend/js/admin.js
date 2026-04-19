@@ -26,9 +26,12 @@ async function loadSets() {
     }
     el.innerHTML = sets.map(s => {
         const n = (s.checklist || []).length;
-        const items = (s.checklist || []).map(i =>
-            `<span class="checklist-chip ${i.mode}">${i.mode === 'exact' ? i.quantity + 'x ' : ''}${i.item_name}</span>`
-        ).join('');
+        const items = (s.checklist || []).map(i => {
+            let nName = i.item_name;
+            if (i.item_name_th) nName += ` <span style="color:var(--text-muted)">(${i.item_name_th})</span>`;
+            const qtyStr = i.mode === 'exact' ? `${i.quantity}x ` : '';
+            return `<li style="margin-left:20px; font-size:0.85rem; color:var(--text-light); list-style-type:disc;">${qtyStr}${nName} ${i.mode==='present' ? '<span style="font-size:0.7rem; color:var(--text-muted)">[ไม่ต้องนับจำนวน]</span>' : ''}</li>`;
+        }).join('');
         return `
         <div class="set-card">
             <div class="set-card-header">

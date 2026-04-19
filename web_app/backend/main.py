@@ -141,7 +141,12 @@ async def verify_tray(payload: dict):
         manual_dividers = payload.get('manual_dividers')
         
         # Step 1: Detect tray + split compartments
-        if corners and manual_dividers:
+        if payload.get('skip_crop'):
+            tray = image
+            compartments = {'full': image}
+            method = 'skip_crop'
+            vx, hy = 0, 0
+        elif corners and manual_dividers:
             # Validate and use manual coordinates
             corners_arr = np.array(corners, dtype=int)
             tray = crop_tray(image, corners_arr)

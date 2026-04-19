@@ -68,9 +68,16 @@
                         if (status === 'pass') {
                             detailsHtml = `<div style="font-size:0.75rem; color:var(--success); margin-top:4px;">✨ อุปกรณ์ครบถ้วน (ไม่ต้องแก้ไข)</div>`;
                         } else if (status === 'fail') {
-                            const missing = vlm.missing?.length ? `ขาด: ${vlm.missing.join(', ')}` : '';
-                            const extra = vlm.extra?.length ? `เกิน: ${vlm.extra.join(', ')}` : '';
-                            detailsHtml = `<div style="font-size:0.75rem; color:var(--danger); margin-top:4px;">⚠️ ต้องแก้ไข: ${missing} ${extra}</div>`;
+                            const missingArray = vlm.missing || [];
+                            const extraArray = vlm.extra || [];
+                            let listsHtml = '';
+                            if (missingArray.length) {
+                                listsHtml += `<div style="margin-top:4px; font-weight:bold;">❌ ขาด:</div><ul style="margin:2px 0 0 0; padding-left:16px;">` + missingArray.map(x => `<li style="margin-bottom:2px; list-style-type:disc;">${x}</li>`).join('') + `</ul>`;
+                            }
+                            if (extraArray.length) {
+                                listsHtml += `<div style="margin-top:4px; font-weight:bold;">⚠️ เกิน:</div><ul style="margin:2px 0 0 0; padding-left:16px;">` + extraArray.map(x => `<li style="margin-bottom:2px; list-style-type:disc;">${x}</li>`).join('') + `</ul>`;
+                            }
+                            detailsHtml = `<div style="font-size:0.75rem; color:var(--danger); margin-top:4px;">${listsHtml}</div>`;
                         } else {
                             detailsHtml = `<div style="font-size:0.75rem; color:var(--warning); margin-top:4px;">⚠️ กำกวม: ${vlm.reason || ''}</div>`;
                         }

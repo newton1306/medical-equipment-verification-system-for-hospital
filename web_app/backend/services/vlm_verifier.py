@@ -70,10 +70,14 @@ def _strip_fences(text: str) -> str:
 def _build_checklist_text(checklist: list[dict]) -> str:
     lines = []
     for e in checklist:
+        name = e['item_name']
+        if e.get('item_name_th'):
+            name += f" ({e['item_name_th']})"
+        
         if e.get('mode') == 'exact':
-            lines.append(f"  - {e.get('quantity', 1)}x {e['item_name']} [EXACT]")
+            lines.append(f"  - {e.get('quantity', 1)}x {name} [EXACT]")
         else:
-            lines.append(f"  - {e['item_name']} [PRESENT]")
+            lines.append(f"  - {name} [PRESENT]")
     return '\n'.join(lines)
 
 

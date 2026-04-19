@@ -25,6 +25,7 @@ const previewImage = document.getElementById('preview-image');
 const btnRetake = document.getElementById('btn-retake');
 const btnRotate = document.getElementById('btn-rotate');
 const btnDetect = document.getElementById('btn-detect');
+const btnVerifyDirect = document.getElementById('btn-verify-direct');
 const btnVerify = document.getElementById('btn-verify');
 const btnNext = document.getElementById('btn-next');
 const processingStatus = document.getElementById('processing-status');
@@ -130,11 +131,15 @@ function renderSetSelector() {
 function renderChecklist() {
     if (!selectedSet) return;
     const items = selectedSet.checklist || [];
-    checklistPreview.innerHTML = items.map(i => {
-        const cls = i.mode === 'exact' ? 'exact' : 'present';
-        const label = i.mode === 'exact' ? `${i.quantity}x ${i.item_name}` : `${i.item_name} ✓`;
-        return `<span class="checklist-chip ${cls}">${label}</span>`;
+    
+    const uiItems = items.map(i => {
+        let nName = i.item_name;
+        if (i.item_name_th) nName += ` <span style="font-size:0.8rem; color:var(--text-muted)">(${i.item_name_th})</span>`;
+        const qtyStr = i.mode === 'exact' ? `${i.quantity}x ` : '';
+        return `<li style="margin-bottom:4px; margin-left:20px; list-style-type:disc; color:var(--text-light);">${qtyStr}${nName} ${i.mode === 'present' ? '<span style="font-size:0.7rem; color:min(--text-muted)">[ไม่ต้องนับจำนวน]</span>' : ''}</li>`;
     }).join('');
+    
+    checklistPreview.innerHTML = `<ul style="margin:0; padding:0; font-size:0.9rem;">${uiItems}</ul>`;
 }
 
 // ── File/Camera input ──
@@ -226,7 +231,7 @@ btnRetake.addEventListener('click', resetCapture);
 function resetCapture() {
     capturedImageBase64 = null;
     previewContainer.classList.add('hidden');
-    document.getElementById('capture-options').classList.remove('hidden');
+    document.getElementById('capture-options').classList.add('hidden');
     mobileCameraInput.value = '';
     fileUploadInput.value = '';
     stepTrayPreview.classList.add('hidden');
@@ -389,8 +394,34 @@ function setupDraggableDividers() {
 // ── Step 3: Verify with VLM ──
 btnVerify.addEventListener('click', async () => {
     if (!selectedSet || !capturedImageBase64) return;
-
     stepTrayPreview.classList.add('hidden');
+    
+    const payload = {
+        set_id: selectedSet.id,
+        image_base64: capturedImageBase64
+    };
+    if (trayData && trayData.corners) {
+        payload.corners = trayData.corners;
+        payload.manual_dividers = currentDividers;
+    }
+    
+    await executeVerify(payload);
+});
+
+btnVerifyDirect.addEventListener('click', async () => {
+    if (!selectedSet || !capturedImageBase64) return;
+    stepCapture.classList.add('hidden');
+    
+    const payload = {
+        set_id: selectedSet.id,
+        image_base64: capturedImageBase64,
+        skip_crop: true
+    };
+    
+    await executeVerify(payload);
+});
+
+async function executeVerify(payload) {
     stepProcessing.classList.remove('hidden');
 
     const stages = ['Sending to Gemini AI...', 'Analyzing instruments...', 'Checking checklist...'];
@@ -402,16 +433,6 @@ btnVerify.addEventListener('click', async () => {
     }, 2000);
 
     try {
-        const payload = {
-            set_id: selectedSet.id,
-            image_base64: capturedImageBase64
-        };
-        
-        if (trayData && trayData.corners) {
-            payload.corners = trayData.corners;
-            payload.manual_dividers = currentDividers;
-        }
-
         const res = await apiFetch(API + '/api/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -437,9 +458,13 @@ btnVerify.addEventListener('click', async () => {
         clearInterval(interval);
         alert('Error: ' + e.message);
         stepProcessing.classList.add('hidden');
-        stepTrayPreview.classList.remove('hidden');
+        if (payload.skip_crop) {
+            stepCapture.classList.remove('hidden');
+        } else {
+            stepTrayPreview.classList.remove('hidden');
+        }
     }
-});
+}
 
 // ── Results ──
 function renderResults(data) {

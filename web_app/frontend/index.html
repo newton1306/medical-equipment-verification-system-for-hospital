@@ -87,13 +87,16 @@
             <!-- Preview Output -->
             <div id="preview-container" class="preview-container hidden">
                 <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px;">
-                    💡 แนะนำ: หมุนภาพให้ <b>"ช่องใหญ่สุด" อยู่ด้านขวามือ</b> เสมอ
+                    ภาพขนาดย่อ (สำหรับใช้ตรวจสอบ)
                 </div>
                 <img id="preview-image" src="" alt="Preview">
-                <div class="preview-actions">
-                    <button class="btn btn-outline" id="btn-retake">ถ่ายใหม่</button>
-                    <button class="btn btn-outline" id="btn-rotate" style="padding: 12px 16px;">หมุน ↻</button>
-                    <button class="btn btn-primary" id="btn-detect">แยกช่อง</button>
+                <div class="preview-actions" style="display:flex; flex-direction:column; gap:8px;">
+                    <button class="btn btn-primary btn-large" id="btn-verify-direct" style="background-color: var(--success); width:100%">⚡ ตรวจสอบทันที (ไม่ต้องแบ่งช่อง)</button>
+                    <div style="display:flex; gap:8px; width:100%;">
+                        <button class="btn btn-outline" id="btn-retake" style="flex:1">ถ่ายใหม่</button>
+                        <button class="btn btn-outline" id="btn-rotate" style="flex:1">หมุน ↻</button>
+                        <button class="btn btn-outline" id="btn-detect" style="flex:1">✂️ ตัดแบ่งเอง</button>
+                    </div>
                 </div>
             </div>
         </section>
