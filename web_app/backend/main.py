@@ -66,34 +66,7 @@ def _encode_image(img: np.ndarray, max_size: int = 400) -> str:
 
 # ── Tray Detection Preview ──
 
-@app.post('/api/detect_boundary')
-def api_detect_boundary(payload: dict):
-    image_b64 = payload.get('image_base64', '')
-    if not image_b64:
-        return {'success': False, 'error': 'image_base64 required'}
-        
-    try:
-        image = _decode_image(image_b64)
-        from backend.services.tray_detector import detect_tray
-        import numpy as np
-        
-        corners = detect_tray(image)
-        if corners is None:
-            h, w = image.shape[:2]
-            p = min(h, w) // 10
-            corners = np.array([[p, p], [w-p, p], [w-p, h-p], [p, h-p]])
-            
-        return {
-            'success': True,
-            'corners': corners.tolist(),
-            'image_size': {'w': image.shape[1], 'h': image.shape[0]}
-        }
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return {'success': False, 'error': str(e)}
-
-@app.post('/api/detect_tray')
+@app.post('/api/detect-tray')
 async def detect_tray_preview(payload: dict):
     """Detect tray and show compartments for user confirmation.
 
@@ -107,17 +80,10 @@ async def detect_tray_preview(payload: dict):
     try:
         image = _decode_image(image_b64)
         from backend.services.tray_detector import detect_tray, crop_tray, split_compartments
-        import numpy as np
         
-        corners_input = payload.get('corners')
-        if corners_input:
-            corners = np.array(corners_input, dtype=int)
-        else:
-            corners = detect_tray(image)
-            if corners is None:
-                h, w = image.shape[:2]
-                pad = int(min(h, w) * 0.05)
-                corners = np.array([[pad, pad], [w-pad, pad], [w-pad, h-pad], [pad, h-pad]])
+        corners = detect_tray(image)
+        if corners is None:
+            raise ValueError('Could not auto-detect tray.')
             
         tray = crop_tray(image, corners)
         compartments, vx, hy = split_compartments(tray)
@@ -175,14 +141,10 @@ async def verify_tray(payload: dict):
         manual_dividers = payload.get('manual_dividers')
         
         # Step 1: Detect tray + split compartments
-        if payload.get('skip_crop') or payload.get('skip_split'):
-            if corners:
-                corners_arr = np.array(corners, dtype=int)
-                tray = crop_tray(image, corners_arr)
-            else:
-                tray = image
-            compartments = {'full': tray}
-            method = 'skip_split'
+        if payload.get('skip_crop'):
+            tray = image
+            compartments = {'full': image}
+            method = 'skip_crop'
             vx, hy = 0, 0
         elif corners and manual_dividers:
             # Validate and use manual coordinates
