@@ -166,11 +166,128 @@ function handleFileInput(e) {
 mobileCameraInput.addEventListener('change', handleFileInput);
 fileUploadInput.addEventListener('change', handleFileInput);
 
-function showPreview(src) {
+let boundaryOriginalSize = null;
+let displayCorners = null;
+const bCanvas = document.getElementById('boundary-canvas');
+const bCtx = bCanvas ? bCanvas.getContext('2d') : null;
+
+async function showPreview(src) {
     previewImage.src = src;
-    previewContainer.classList.remove('hidden');
+    
+    // Reset UI
+    stepTrayPreview.classList.add('hidden');
     document.getElementById('capture-options').classList.add('hidden');
     document.getElementById('webcam-container').classList.add('hidden');
+    
+    stepProcessing.classList.remove('hidden');
+    processingStatus.textContent = 'วิเคราะห์ขอบเขตถาดสแตนเลส...';
+    
+    try {
+        const res = await apiFetch(API + '/api/detect_boundary', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_base64: src })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            boundaryOriginalSize = data.image_size;
+            previewImage.onload = () => {
+                bCanvas.width = previewImage.clientWidth;
+                bCanvas.height = previewImage.clientHeight;
+                const scaleX = bCanvas.width / boundaryOriginalSize.w;
+                const scaleY = bCanvas.height / boundaryOriginalSize.h;
+                displayCorners = data.corners.map(c => ({ x: c[0] * scaleX, y: c[1] * scaleY }));
+                drawBoundary();
+                previewContainer.classList.remove('hidden');
+            };
+        } else {
+            throw new Error(data.error);
+        }
+    } catch(e) {
+        alert("Detect boundary error: " + e.message);
+        previewContainer.classList.remove('hidden'); // fallback to show it anyway
+    }
+    
+    stepProcessing.classList.add('hidden');
+}
+
+function drawBoundary() {
+    if (!displayCorners || !bCtx) return;
+    bCtx.clearRect(0, 0, bCanvas.width, bCanvas.height);
+    
+    // Dark overlay background
+    bCtx.fillStyle = 'rgba(0,0,0,0.6)';
+    bCtx.fillRect(0, 0, bCanvas.width, bCanvas.height);
+    
+    // Cutout polygon (transparent tray)
+    bCtx.globalCompositeOperation = 'destination-out';
+    bCtx.beginPath();
+    bCtx.moveTo(displayCorners[0].x, displayCorners[0].y);
+    bCtx.lineTo(displayCorners[1].x, displayCorners[1].y);
+    bCtx.lineTo(displayCorners[2].x, displayCorners[2].y);
+    bCtx.lineTo(displayCorners[3].x, displayCorners[3].y);
+    bCtx.closePath();
+    bCtx.fill();
+    bCtx.globalCompositeOperation = 'source-over';
+    
+    // Green frame
+    bCtx.strokeStyle = '#00ff88'; // vibrant green
+    bCtx.lineWidth = 3;
+    bCtx.stroke();
+    
+    // White control points
+    bCtx.fillStyle = '#fff';
+    displayCorners.forEach(p => {
+        bCtx.beginPath();
+        bCtx.arc(p.x, p.y, 10, 0, 2*Math.PI);
+        bCtx.fill();
+        bCtx.stroke();
+    });
+}
+
+// ── Drag Logic for Boundary Canvas ──
+let dragPointIndex = -1;
+
+function getEventPos(e) {
+    const rect = bCanvas.getBoundingClientRect();
+    const touch = e.touches ? e.touches[0] : e;
+    const clientX = touch ? touch.clientX : e.clientX;
+    const clientY = touch ? touch.clientY : e.clientY;
+    return { x: clientX - rect.left, y: clientY - rect.top };
+}
+
+function handlePointerDown(e) {
+    if (!displayCorners) return;
+    const pos = getEventPos(e);
+    dragPointIndex = displayCorners.findIndex(p => {
+        const dx = p.x - pos.x;
+        const dy = p.y - pos.y;
+        return Math.sqrt(dx*dx + dy*dy) < 30; // 30px touch radius
+    });
+    if (dragPointIndex !== -1) e.preventDefault();
+}
+
+function handlePointerMove(e) {
+    if (dragPointIndex === -1 || !displayCorners) return;
+    e.preventDefault();
+    const pos = getEventPos(e);
+    displayCorners[dragPointIndex].x = Math.max(0, Math.min(bCanvas.width, pos.x));
+    displayCorners[dragPointIndex].y = Math.max(0, Math.min(bCanvas.height, pos.y));
+    drawBoundary();
+}
+
+function handlePointerUp() {
+    dragPointIndex = -1;
+}
+
+if (bCanvas) {
+    bCanvas.addEventListener('mousedown', handlePointerDown);
+    bCanvas.addEventListener('mousemove', handlePointerMove);
+    window.addEventListener('mouseup', handlePointerUp);
+    bCanvas.addEventListener('touchstart', handlePointerDown, {passive: false});
+    bCanvas.addEventListener('touchmove', handlePointerMove, {passive: false});
+    bCanvas.addEventListener('touchend', handlePointerUp);
 }
 
 function resizeImage(dataUrl, maxSize, callback) {
@@ -251,7 +368,7 @@ function backToCapture() {
     resetCapture();
 }
 
-// ── Rotate Image ──
+// Rotate Image helper
 btnRotate.addEventListener('click', () => {
     if (!capturedImageBase64) return;
     const img = new Image();
@@ -264,30 +381,44 @@ btnRotate.addEventListener('click', () => {
         ctx.rotate(Math.PI / 2); // 90 deg right
         ctx.drawImage(img, -img.width / 2, -img.height / 2);
         capturedImageBase64 = canvas.toDataURL('image/jpeg', 0.85);
-        previewImage.src = capturedImageBase64;
+        showPreview(capturedImageBase64); // rerun bounding box detection
     };
     img.src = capturedImageBase64;
 });
 
+// Helper: map corners back to original image size
+function getOriginalCorners() {
+    if (!displayCorners || !boundaryOriginalSize) return null;
+    const scaleX = boundaryOriginalSize.w / bCanvas.width;
+    const scaleY = boundaryOriginalSize.h / bCanvas.height;
+    return displayCorners.map(c => [
+        Math.round(c.x * scaleX),
+        Math.round(c.y * scaleY)
+    ]);
+}
+
 // Tray State
 let trayData = null;
 let currentDividers = null;
+let cropRotation = 0;
 
-// ── Step 2.5: Detect Tray ──
-btnDetect.addEventListener('click', async () => {
-    if (!capturedImageBase64) return;
-
-    stepCapture.classList.add('hidden');
-    btnDetect.disabled = true;
-    btnDetect.textContent = 'กำลังประมวลผล...';
+async function doDetectTray() {
+    previewContainer.classList.add('hidden');
+    stepTrayPreview.classList.add('hidden');
     stepProcessing.classList.remove('hidden');
-    processingStatus.textContent = 'Detecting tray...';
+    processingStatus.textContent = 'กำลังแบ่งช่อง และตรวจสอบความถูกต้อง...';
+
+    const corners = getOriginalCorners();
 
     try {
         const res = await apiFetch(API + '/api/detect-tray', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image_base64: capturedImageBase64 }),
+            body: JSON.stringify({ 
+                image_base64: capturedImageBase64, 
+                corners: corners,
+                rotate_crop: cropRotation
+            })
         });
         let data;
         const textRes = await res.text();
@@ -298,13 +429,8 @@ btnDetect.addEventListener('click', async () => {
         }
 
         stepProcessing.classList.remove('hidden');
-        btnDetect.disabled = false;
-        btnDetect.textContent = 'Detect Tray';
-
         if (!data.success) {
-            alert('ตรวจจับถาดไม่ได้: ' + (data.error || 'Unknown error') + '\nลองถ่ายใหม่ให้เห็นถาดชัดๆ');
-            stepCapture.classList.remove('hidden');
-            return;
+            throw new Error(data.error || data.detail || 'Detection failed');
         }
 
         // Save tray data
@@ -338,15 +464,22 @@ btnDetect.addEventListener('click', async () => {
                 </div>`;
         }
 
+        stepProcessing.classList.add('hidden');
         stepTrayPreview.classList.remove('hidden');
+        stepTrayPreview.scrollIntoView({ behavior: 'smooth' });
 
     } catch (e) {
-        stepProcessing.classList.add('hidden');
-        stepCapture.classList.remove('hidden');
-        btnDetect.disabled = false;
-        btnDetect.textContent = 'Detect Tray';
         alert('Error: ' + e.message);
+        stepProcessing.classList.add('hidden');
+        previewContainer.classList.remove('hidden');
     }
+}
+
+// ── Option 2: Detect Tray (Split) ──
+btnDetect.addEventListener('click', () => {
+    if (!capturedImageBase64) return;
+    cropRotation = 0; // Reset rotation when entering Option 2
+    doDetectTray();
 });
 
 function setupDraggableDividers() {
@@ -397,6 +530,32 @@ function setupDraggableDividers() {
     window.addEventListener('touchend', onUp);
 }
 
+// Rotate tray helper (rotates only the cropped tray in backend and restarts split)
+const btnRotateTray = document.getElementById('btn-rotate-tray');
+if (btnRotateTray) {
+    btnRotateTray.addEventListener('click', () => {
+        cropRotation = (cropRotation + 90) % 360;
+        doDetectTray();
+    });
+}
+
+btnVerifyDirect.addEventListener('click', async () => {
+    if (!selectedSet || !capturedImageBase64) return;
+    previewContainer.classList.add('hidden');
+    document.getElementById('capture-options').classList.add('hidden');
+    
+    // Direct verification bypasses the option 2 rotation entirely
+    const payload = {
+        set_id: selectedSet.id,
+        image_base64: capturedImageBase64,
+        skip_split: true,
+        corners: getOriginalCorners(),
+        rotate_crop: 0 
+    };
+    
+    await executeVerify(payload);
+});
+
 // ── Step 3: Verify with VLM ──
 btnVerify.addEventListener('click', async () => {
     if (!selectedSet || !capturedImageBase64) return;
@@ -404,12 +563,16 @@ btnVerify.addEventListener('click', async () => {
     
     const payload = {
         set_id: selectedSet.id,
-        image_base64: capturedImageBase64
+        image_base64: capturedImageBase64,
+        rotate_crop: cropRotation
     };
     if (trayData && trayData.corners) {
         payload.corners = trayData.corners;
-        payload.manual_dividers = currentDividers;
+    } else {
+        const c = getOriginalCorners();
+        if (c) payload.corners = c;
     }
+    payload.manual_dividers = currentDividers;
     
     await executeVerify(payload);
 });
@@ -464,8 +627,8 @@ async function executeVerify(payload) {
         clearInterval(interval);
         alert('Error: ' + e.message);
         stepProcessing.classList.add('hidden');
-        if (payload.skip_crop) {
-            stepCapture.classList.remove('hidden');
+        if (payload.skip_split || payload.skip_crop) {
+            previewContainer.classList.remove('hidden');
         } else {
             stepTrayPreview.classList.remove('hidden');
         }

@@ -87,15 +87,18 @@
             <!-- Preview Output -->
             <div id="preview-container" class="preview-container hidden">
                 <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px;">
-                    ภาพขนาดย่อ (สำหรับใช้ตรวจสอบ)
+                    ลากจุดกลมสีเขียวทั้ง 4 มุม เพื่อครอบขอบถาดสแตนเลสให้พอดี
                 </div>
-                <img id="preview-image" src="" alt="Preview">
-                <div class="preview-actions" style="display:flex; flex-direction:column; gap:8px;">
-                    <button class="btn btn-primary btn-large" id="btn-verify-direct" style="background-color: var(--success); width:100%">⚡ ตรวจสอบทันที (ไม่ต้องแบ่งช่อง)</button>
+                <div id="boundary-editor-container" style="position:relative; width:100%; touch-action:none; margin: 0 auto; overflow: hidden; border-radius: 8px;">
+                    <img id="preview-image" src="" alt="Preview" style="display:block; width:100%; height:auto;">
+                    <canvas id="boundary-canvas" style="position:absolute; top:0; left:0; width:100%; height:100%; touch-action:none;"></canvas>
+                </div>
+                <div class="preview-actions" style="display:flex; flex-direction:column; gap:8px; margin-top:16px;">
+                    <button class="btn btn-primary btn-large" id="btn-verify-direct" style="background-color: var(--success); width:100%">⚡ ตรวจสอบทันที (ส่งทั้งถาดจบงาน)</button>
                     <div style="display:flex; gap:8px; width:100%;">
-                        <button class="btn btn-outline" id="btn-retake" style="flex:1">ถ่ายใหม่</button>
+                        <button class="btn btn-outline" id="btn-retake" style="flex:1">📷 ถ่ายใหม่</button>
                         <button class="btn btn-outline" id="btn-rotate" style="flex:1">หมุน ↻</button>
-                        <button class="btn btn-outline" id="btn-detect" style="flex:1">✂️ ตัดแบ่งเอง</button>
+                        <button class="btn btn-outline" id="btn-detect" style="flex:1">✂️ ตัดแบ่งช่อง (Option 2)</button>
                     </div>
                 </div>
             </div>
@@ -104,13 +107,16 @@
         <!-- Step 2.5: Tray Detection Preview -->
         <section id="step-tray-preview" class="card hidden">
             <div class="step-badge" style="background:#f59e0b">!</div>
-            <h2>ตรวจสอบการตรวจจับถาด</h2>
-            <p class="tray-hint">เส้นสีเขียว = เส้นแบ่งช่อง — ถูกต้องหรือไม่?</p>
+            <h2>แบ่งช่องตาราง (Option 2)</h2>
+            <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;">
+                💡 <b>คำแนะนำ:</b> ถ้าถาดเป็นแนวตั้ง ให้กดปุ่ม <b>หมุน ↻</b> (ในหน้าลากเส้นแบ่ง) เพื่อให้ "ช่องใหญ่สุด" หมุนไปอยู่ทางฝั่งขวามือก่อนทำงาน
+            </div>
+            <p class="tray-hint" style="margin-bottom:8px;">เลื่อนจุดเส้นประเพื่อปรับเส้นแบ่งลากย่อย 3 ช่อง</p>
             <div id="tray-preview-img" class="tray-preview-img"></div>
             <div id="tray-compartments" class="compartment-grid"></div>
-            <div class="preview-actions" style="margin-top:12px">
-                <button class="btn btn-outline" onclick="backToCapture()">📷 ถ่ายใหม่</button>
-                <button class="btn btn-primary" id="btn-verify">✅ ตรวจสอบเครื่องมือ</button>
+            <div class="preview-actions" style="margin-top:12px; display:flex; gap:8px;">
+                <button class="btn btn-outline" id="btn-rotate-tray" style="flex:1">หมุน ↻</button>
+                <button class="btn btn-primary" id="btn-verify" style="flex:2">✅ ยืนยันตรวจสอบ</button>
             </div>
         </section>
 
