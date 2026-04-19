@@ -28,9 +28,9 @@ async function loadSets() {
         const n = (s.checklist || []).length;
         const items = (s.checklist || []).map(i => {
             let nName = i.item_name;
-            if (i.item_name_th) nName += ` <span style="color:var(--text-muted)">(${i.item_name_th})</span>`;
+            if (i.item_name_th) nName += ` <span>(${i.item_name_th})</span>`;
             const qtyStr = i.mode === 'exact' ? `${i.quantity}x ` : '';
-            return `<li style="margin-left:20px; font-size:0.85rem; color:var(--text-light); list-style-type:disc;">${qtyStr}${nName} ${i.mode==='present' ? '<span style="font-size:0.7rem; color:var(--text-muted)">[ไม่ต้องนับจำนวน]</span>' : ''}</li>`;
+            return `<span class="checklist-chip ${i.mode}">${qtyStr}${nName}</span>`;
         }).join('');
         return `
         <div class="set-card">
