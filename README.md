@@ -161,6 +161,7 @@ start_server.bat
 ```
 
 Script จะทำงานต่อไปนี้ให้อัตโนมัติ:
+
 1. ✅ ตรวจสอบว่ามี Python หรือไม่
 2. ✅ สร้าง Virtual Environment (`.venv`)
 3. ✅ ติดตั้ง Dependencies ทั้งหมด
@@ -221,10 +222,12 @@ docker run -p 7860:7860 --env-file .env equip-verify
 ### CI/CD
 
 ไฟล์ `.github/workflows/sync_hf.yml` ทำงานเมื่อ:
+
 - Push ไปที่ `main` branch ที่แก้ไขไฟล์ใน `web_app/`
 - หรือ Trigger ด้วยมือผ่าน `workflow_dispatch`
 
 **ต้องตั้งค่า Secret:**
+
 - `HF_TOKEN` — Hugging Face Access Token
 
 ---
@@ -241,7 +244,7 @@ docker run -p 7860:7860 --env-file .env equip-verify
 | `checklist_items` | รายการเครื่องมือในแต่ละชุด + จำนวนที่ต้องมี |
 | `verification_logs` | บันทึกผลการตรวจสอบทุกครั้ง |
 
-4. RLS (Row Level Security) เปิดไว้แบบ **allow all** — เหมาะสำหรับ Internal network
+1. RLS (Row Level Security) เปิดไว้แบบ **allow all** — เหมาะสำหรับ Internal network
 
 ---
 
