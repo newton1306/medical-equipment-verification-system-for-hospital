@@ -312,7 +312,11 @@ async def verify_tray(payload: dict):
 
 @app.get('/api/sets')
 async def list_sets():
-    return await db.get_all_sets()
+    try:
+        return await db.get_all_sets()
+    except Exception as e:
+        print(f'[ERROR] Failed to load sets: {e}')
+        raise HTTPException(500, f'Database connection failed: {str(e)[:200]}')
 
 
 @app.get('/api/sets/{set_id}')
