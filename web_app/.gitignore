@@ -25,5 +25,8 @@ Thumbs.db
 *.swp
 *.swo
 
+# Server scripts (private)
+start_server.bat
+
 # Render deployment
 # We DO NOT ignore requirements.txt or backend/frontend code.

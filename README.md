@@ -2,7 +2,6 @@
 
 ระบบ AI สำหรับตรวจสอบความถูกต้องและความครบถ้วนของเครื่องมือแพทย์ (Surgical Instrument Verification) ก่อนขั้นตอนการแพ็คและนึ่งฆ่าเชื้อ — ออกแบบมาเพื่อใช้งานจริงในแผนก **CSSD (Central Sterile Supply Department)** ของโรงพยาบาล
 
-> **Live Demo:** [https://huggingface.co/spaces/zonewtonx/phusinghos-equip-verify](https://huggingface.co/spaces/zonewtonx/phusinghos-equip-verify)
 
 ---
 
@@ -16,7 +15,6 @@
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Environment Variables](#environment-variables)
-  - [Quick Start (Windows)](#quick-start-windows)
   - [Manual Setup](#manual-setup)
   - [Docker](#docker)
 - [Deployment](#deployment)
@@ -116,7 +114,6 @@ medical-equipment-verification-system-for-hospital/
 │   ├── Dockerfile                   # Docker image for HF Spaces
 │   ├── requirements.txt             # Python dependencies
 │   ├── generate_cert.py             # Self-signed SSL certificate generator
-│   ├── start_server.bat             # One-click server startup (Windows)
 │   ├── supabase_migration.sql       # Database schema + seed data
 │   └── .gitignore
 └── README.md
@@ -150,25 +147,6 @@ GEMINI_ESCALATION_THRESHOLD=75     # ค่า confidence ขั้นต่ำ 
 MAX_IMAGE_SIZE=1920                # ขนาดภาพสูงสุด (px)
 ALLOWED_ORIGINS=*                  # CORS origins (คั่นด้วย ,)
 ```
-
-### Quick Start (Windows)
-
-วิธีที่ง่ายที่สุด — ดับเบิลคลิก `start_server.bat`:
-
-```
-cd web_app
-start_server.bat
-```
-
-Script จะทำงานต่อไปนี้ให้อัตโนมัติ:
-
-1. ✅ ตรวจสอบว่ามี Python หรือไม่
-2. ✅ สร้าง Virtual Environment (`.venv`)
-3. ✅ ติดตั้ง Dependencies ทั้งหมด
-4. ✅ สร้าง SSL Certificate (Self-signed)
-5. ✅ เปิดเซิร์ฟเวอร์ HTTPS บนพอร์ต `8000`
-
-เปิดเบราว์เซอร์ไปที่ `https://<YOUR-IP>:8000` (ต้องกด **Advanced → Proceed** เพราะเป็น Self-signed Certificate)
 
 ### Manual Setup
 
@@ -213,11 +191,10 @@ docker run -p 7860:7860 --env-file .env equip-verify
 
 ### Hugging Face Spaces
 
-โปรเจกต์นี้ Deploy เป็น Docker Space บน Hugging Face โดยอัตโนมัติ:
+โปรเจกต์นี้รองรับ Deploy เป็น Docker Space บน Hugging Face:
 
 1. Push ไปที่ branch `main` (เฉพาะไฟล์ใน `web_app/`)
 2. GitHub Actions จะ sync โฟลเดอร์ `web_app/` ไปยัง Hugging Face Space โดยอัตโนมัติ
-3. Space URL: `https://huggingface.co/spaces/zonewtonx/phusinghos-equip-verify`
 
 ### CI/CD
 
