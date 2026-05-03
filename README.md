@@ -1,7 +1,6 @@
 # 🏥 Medical Equipment Verification System for Hospital
 
-ระบบ AI สำหรับตรวจสอบความถูกต้องและความครบถ้วนของเครื่องมือแพทย์ (Surgical Instrument Verification) ก่อนขั้นตอนการแพ็คและนึ่งฆ่าเชื้อ — ออกแบบมาเพื่อใช้งานจริงในแผนก **CSSD (Central Sterile Supply Department)** ของโรงพยาบาล
-
+An AI-powered system for verifying the correctness and completeness of surgical instrument trays before packing and sterilization — designed for real-world use in the **CSSD (Central Sterile Supply Department)** of hospitals.
 
 ---
 
@@ -29,7 +28,7 @@
 
 ## Overview
 
-เจ้าหน้าที่ CSSD ต้องตรวจนับเครื่องมือแพทย์ในถาดทุกครั้งก่อนห่อเพื่อนึ่งฆ่าเชื้อ ระบบนี้ช่วยเร่งกระบวนการดังกล่าวโดยใช้ **Computer Vision + Vision Language Model (VLM)** วิเคราะห์ภาพถ่ายถาดเครื่องมือแล้วเปรียบเทียบกับ Checklist ที่กำหนดไว้ จากนั้นแจ้งผลทันทีว่า **PASS / FAIL / UNCERTAIN** พร้อมระบุรายการที่ขาดหรือเกิน
+CSSD staff must manually count and verify every surgical instrument in a tray before wrapping it for sterilization. This system accelerates that process by using **Computer Vision + Vision Language Model (VLM)** to analyze photos of instrument trays and compare them against a predefined checklist, instantly reporting **PASS / FAIL / UNCERTAIN** along with details on any missing or extra items.
 
 ---
 
@@ -37,15 +36,15 @@
 
 | Feature | Description |
 |---|---|
-| 📸 **Multi-input Capture** | รองรับกล้องมือถือ, Webcam (WebRTC), และอัปโหลดภาพจากไฟล์ |
-| 🔍 **Tray Auto-Detection** | ตรวจจับขอบถาดสแตนเลสอัตโนมัติด้วย OpenCV (Canny Edge + Contour) |
-| ✂️ **Compartment Splitting** | แบ่งถาดออกเป็น 3 ช่อง (2 เล็ก + 1 ใหญ่) ด้วย Hough Line Detection |
-| 🧠 **AI Verification (Tiered)** | ใช้ Gemini Flash ก่อน → Escalate ไป Gemini Pro เมื่อ confidence ต่ำ |
-| 📊 **Dashboard** | สรุปสถิติ PASS/FAIL/UNCERTAIN, แสดง Daily breakdown, และ Recent logs |
-| ⚙️ **Set Management (Admin)** | CRUD จัดการชุดเครื่องมือ (Instrument Sets) + Checklist Items |
-| 📱 **PWA (Mobile-first)** | ติดตั้งเป็นแอปบนมือถือได้, Offline-capable ด้วย Service Worker |
-| 🔒 **Password Protection** | ป้องกัน API ด้วยรหัสผ่าน (Optional) |
-| ☁️ **Cloud-ready** | Deploy ได้ทั้ง Hugging Face Spaces (Docker) และ Local Network (HTTPS) |
+| 📸 **Multi-input Capture** | Supports mobile camera, Webcam (WebRTC), and file upload |
+| 🔍 **Tray Auto-Detection** | Automatically detects stainless steel tray boundaries using OpenCV (Canny Edge + Contour) |
+| ✂️ **Compartment Splitting** | Splits the tray into 3 compartments (2 small + 1 large) via Hough Line Detection |
+| 🧠 **AI Verification (Tiered)** | Uses Gemini Flash first → Escalates to Gemini Pro when confidence is low |
+| 📊 **Dashboard** | Summarizes PASS/FAIL/UNCERTAIN statistics with daily breakdown and recent logs |
+| ⚙️ **Set Management (Admin)** | Full CRUD for managing Instrument Sets and Checklist Items |
+| 📱 **PWA (Mobile-first)** | Installable as a mobile app, offline-capable via Service Worker |
+| 🔒 **Password Protection** | Optional password-protected API access |
+| ☁️ **Cloud-ready** | Deployable on Hugging Face Spaces (Docker) and local network (HTTPS) |
 
 ---
 
@@ -125,13 +124,13 @@ medical-equipment-verification-system-for-hospital/
 
 ### Prerequisites
 
-- **Python** 3.10 หรือใหม่กว่า
-- **Gemini API Key** — รับได้ที่ [Google AI Studio](https://aistudio.google.com/apikey)
-- **Supabase Project** — สร้างฟรีที่ [supabase.com](https://supabase.com) (ใช้เก็บ Instrument Sets และ Verification Logs)
+- **Python** 3.10 or newer
+- **Gemini API Key** — Obtain one at [Google AI Studio](https://aistudio.google.com/apikey)
+- **Supabase Project** — Create a free project at [supabase.com](https://supabase.com) (used to store Instrument Sets and Verification Logs)
 
 ### Environment Variables
 
-สร้างไฟล์ `.env` ใน `web_app/`:
+Create a `.env` file inside `web_app/`:
 
 ```env
 # Required
@@ -140,22 +139,22 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your_supabase_anon_key
 
 # Optional
-APP_PASSWORD=                      # ตั้งรหัสผ่านเข้าใช้งาน (เว้นว่าง = ไม่ต้องล็อกอิน)
-GEMINI_MODEL_FAST=gemini-2.5-flash # โมเดลเริ่มต้น (เร็ว)
-GEMINI_MODEL_PRO=gemini-2.5-pro    # โมเดลสำรอง (แม่นยำ)
-GEMINI_ESCALATION_THRESHOLD=75     # ค่า confidence ขั้นต่ำ ก่อน escalate ไป Pro
-MAX_IMAGE_SIZE=1920                # ขนาดภาพสูงสุด (px)
-ALLOWED_ORIGINS=*                  # CORS origins (คั่นด้วย ,)
+APP_PASSWORD=                      # Set a password for app access (leave empty = no login required)
+GEMINI_MODEL_FAST=gemini-2.5-flash # Default model (fast)
+GEMINI_MODEL_PRO=gemini-2.5-pro    # Fallback model (more accurate)
+GEMINI_ESCALATION_THRESHOLD=75     # Minimum confidence before escalating to Pro
+MAX_IMAGE_SIZE=1920                # Maximum image dimension (px)
+ALLOWED_ORIGINS=*                  # CORS origins (comma-separated)
 ```
 
 ### Manual Setup
 
 ```bash
-# 1. Clone repository
+# 1. Clone the repository
 git clone https://github.com/newton1306/medical-equipment-verification-system-for-hospital.git
 cd medical-equipment-verification-system-for-hospital/web_app
 
-# 2. สร้าง Virtual Environment
+# 2. Create a virtual environment
 python -m venv .venv
 
 # 3. Activate
@@ -164,16 +163,16 @@ python -m venv .venv
 # Linux/macOS:
 source .venv/bin/activate
 
-# 4. ติดตั้ง Dependencies
+# 4. Install dependencies
 pip install -r requirements.txt
 
-# 5. สร้างไฟล์ .env (ดูหัวข้อ Environment Variables)
+# 5. Create the .env file (see Environment Variables section above)
 
-# 6. รันเซิร์ฟเวอร์
+# 6. Start the server
 uvicorn backend.main:app --host 0.0.0.0 --port 8000
 ```
 
-> 💡 **หมายเหตุ:** หากต้องการใช้กล้องบนมือถือผ่าน WiFi จำเป็นต้องใช้ HTTPS — รัน `python generate_cert.py` แล้วเพิ่ม `--ssl-keyfile key.pem --ssl-certfile cert.pem`
+> 💡 **Note:** To use the camera on a mobile device over WiFi, HTTPS is required. Run `python generate_cert.py` first, then add `--ssl-keyfile key.pem --ssl-certfile cert.pem` to the uvicorn command.
 
 ### Docker
 
@@ -183,7 +182,7 @@ docker build -t equip-verify .
 docker run -p 7860:7860 --env-file .env equip-verify
 ```
 
-เปิดเบราว์เซอร์ที่ `http://localhost:7860`
+Open your browser at `http://localhost:7860`
 
 ---
 
@@ -191,19 +190,19 @@ docker run -p 7860:7860 --env-file .env equip-verify
 
 ### Hugging Face Spaces
 
-โปรเจกต์นี้รองรับ Deploy เป็น Docker Space บน Hugging Face:
+This project supports deployment as a Docker Space on Hugging Face:
 
-1. Push ไปที่ branch `main` (เฉพาะไฟล์ใน `web_app/`)
-2. GitHub Actions จะ sync โฟลเดอร์ `web_app/` ไปยัง Hugging Face Space โดยอัตโนมัติ
+1. Push to the `main` branch (only files inside `web_app/`)
+2. GitHub Actions will automatically sync the `web_app/` folder to the Hugging Face Space
 
 ### CI/CD
 
-ไฟล์ `.github/workflows/sync_hf.yml` ทำงานเมื่อ:
+The `.github/workflows/sync_hf.yml` workflow is triggered when:
 
-- Push ไปที่ `main` branch ที่แก้ไขไฟล์ใน `web_app/`
-- หรือ Trigger ด้วยมือผ่าน `workflow_dispatch`
+- Changes are pushed to `main` branch that modify files in `web_app/`
+- Or manually triggered via `workflow_dispatch`
 
-**ต้องตั้งค่า Secret:**
+**Required Secret:**
 
 - `HF_TOKEN` — Hugging Face Access Token
 
@@ -211,17 +210,17 @@ docker run -p 7860:7860 --env-file .env equip-verify
 
 ## Database Setup (Supabase)
 
-1. สร้างโปรเจกต์ใหม่ที่ [supabase.com](https://supabase.com)
-2. เปิด **SQL Editor** แล้วรันไฟล์ `web_app/supabase_migration.sql`
-3. Script จะสร้าง:
+1. Create a new project at [supabase.com](https://supabase.com)
+2. Open the **SQL Editor** and run the `web_app/supabase_migration.sql` file
+3. The script will create the following tables:
 
 | Table | Description |
 |---|---|
-| `instrument_sets` | ชุดเครื่องมือแพทย์ (เช่น Dressing Set, Minor Set) |
-| `checklist_items` | รายการเครื่องมือในแต่ละชุด + จำนวนที่ต้องมี |
-| `verification_logs` | บันทึกผลการตรวจสอบทุกครั้ง |
+| `instrument_sets` | Surgical instrument sets (e.g., Dressing Set, Minor Set) |
+| `checklist_items` | Items in each set with expected quantities |
+| `verification_logs` | Logs of every verification result |
 
-1. RLS (Row Level Security) เปิดไว้แบบ **allow all** — เหมาะสำหรับ Internal network
+4. RLS (Row Level Security) is configured as **allow all** — suitable for internal network use
 
 ---
 
@@ -233,35 +232,35 @@ Base URL: `https://<host>:<port>`
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/verify` | ตรวจสอบถาดเครื่องมือ (main endpoint) |
-| `POST` | `/api/detect-tray` | ตรวจจับถาด + แสดง Preview ช่องแบ่ง |
-| `POST` | `/api/detect_boundary` | ตรวจจับขอบถาดอย่างเดียว |
+| `POST` | `/api/verify` | Verify an instrument tray (main endpoint) |
+| `POST` | `/api/detect-tray` | Detect tray and preview compartment splits |
+| `POST` | `/api/detect_boundary` | Detect tray boundary only |
 
 ### Instrument Sets (CRUD)
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/sets` | ดึงรายการชุดเครื่องมือทั้งหมด |
-| `GET` | `/api/sets/{set_id}` | ดึงชุดเครื่องมือตาม ID |
-| `POST` | `/api/sets` | สร้างชุดเครื่องมือใหม่ |
-| `PUT` | `/api/sets/{set_id}` | แก้ไขชุดเครื่องมือ |
-| `DELETE` | `/api/sets/{set_id}` | ลบชุดเครื่องมือ |
+| `GET` | `/api/sets` | List all instrument sets |
+| `GET` | `/api/sets/{set_id}` | Get a specific instrument set by ID |
+| `POST` | `/api/sets` | Create a new instrument set |
+| `PUT` | `/api/sets/{set_id}` | Update an instrument set |
+| `DELETE` | `/api/sets/{set_id}` | Delete an instrument set |
 
 ### Auth & Dashboard
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/login` | ล็อกอิน (ถ้าตั้ง `APP_PASSWORD`) |
-| `GET` | `/api/dashboard` | ดึงสถิติ PASS/FAIL/UNCERTAIN + Daily breakdown |
-| `GET` | `/api/logs?limit=50` | ดึง Verification Logs ล่าสุด |
+| `POST` | `/api/login` | Login (if `APP_PASSWORD` is set) |
+| `GET` | `/api/dashboard` | Get PASS/FAIL/UNCERTAIN statistics with daily breakdown |
+| `GET` | `/api/logs?limit=50` | Get recent verification logs |
 
 ### Frontend Pages
 
 | Path | Page |
 |---|---|
-| `/` | หน้าหลัก — ถ่ายภาพ + ตรวจสอบ |
-| `/admin` | จัดการชุดเครื่องมือ (CRUD) |
-| `/dashboard` | สถิติและ Logs |
+| `/` | Main page — capture photo and verify |
+| `/admin` | Instrument set management (CRUD) |
+| `/dashboard` | Statistics and logs |
 
 ---
 
@@ -269,7 +268,7 @@ Base URL: `https://<host>:<port>`
 
 ```mermaid
 flowchart TD
-    A[📸 ถ่ายภาพถาดเครื่องมือ] --> B{🔍 Tray Detection}
+    A[📸 Capture Instrument Tray] --> B{🔍 Tray Detection}
     B -->|Auto-detect corners| C[✂️ Perspective Crop]
     C --> D[📐 Split Compartments]
     D --> E{🔎 Stage 1: Sanity Check}
@@ -284,14 +283,14 @@ flowchart TD
 
 ### Verification Pipeline
 
-1. **Capture** — ผู้ใช้ถ่ายภาพถาดเครื่องมือผ่านกล้องมือถือ / Webcam / อัปโหลดไฟล์
-2. **Tray Detection** — OpenCV ตรวจจับขอบถาดสแตนเลส (Canny Edge Detection + Contour Approximation)
-3. **Perspective Correction** — Warp ภาพเป็นมุมมองด้านบน (bird's-eye view)
-4. **Compartment Splitting** — แบ่งถาดออกเป็น 3 ช่อง ด้วย Hough Line Detection
-5. **Stage 1 (Local)** — ตรวจสอบเบื้องต้นว่าถาดว่างหรือไม่ (Edge ratio analysis)
-6. **Stage 2 (VLM)** — ส่งภาพ Close-up แต่ละช่อง + ภาพรวม + Reference image ไปยัง Gemini API
-7. **Tiered Escalation** — ถ้า Flash ให้ confidence ต่ำ (< 75) จะ Escalate ไปใช้ Pro อัตโนมัติ
-8. **Result** — แสดงผล PASS ✅ / FAIL ❌ / UNCERTAIN ⚠️ พร้อมรายละเอียด
+1. **Capture** — The user takes a photo of the instrument tray via mobile camera, webcam, or file upload
+2. **Tray Detection** — OpenCV detects the stainless steel tray boundaries (Canny Edge Detection + Contour Approximation)
+3. **Perspective Correction** — The image is warped to a bird's-eye view
+4. **Compartment Splitting** — The tray is split into 3 compartments using Hough Line Detection
+5. **Stage 1 (Local)** — A preliminary check determines whether the tray is empty (edge ratio analysis)
+6. **Stage 2 (VLM)** — Close-up images of each compartment, the full tray overview, and a reference image are sent to the Gemini API
+7. **Tiered Escalation** — If Flash returns low confidence (< 75), the system automatically escalates to Gemini Pro
+8. **Result** — Displays PASS ✅ / FAIL ❌ / UNCERTAIN ⚠️ with detailed item-by-item breakdown
 
 ---
 
