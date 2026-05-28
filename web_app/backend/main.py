@@ -186,7 +186,21 @@ async def verify_tray(payload: dict):
         manual_dividers = payload.get('manual_dividers')
         
         # Step 1: Detect tray + split compartments
-        if payload.get('skip_crop') or payload.get('skip_split'):
+        version = int(payload.get('version', 1))
+
+        if version == 2:
+            tray = image
+            compartments = {'full': image}
+            method = 'full_image_direct'
+            vx, hy = 0, 0
+            
+            # Simple sanity check for full image (low contrast/dark)
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            if gray.std() < 12:
+                s1 = 'EMPTY_TRAY'
+            else:
+                s1 = 'SEND_TO_VLM'
+        elif payload.get('skip_crop') or payload.get('skip_split'):
             if corners:
                 corners_arr = np.array(corners, dtype=int)
                 tray = crop_tray(image, corners_arr)
@@ -206,6 +220,7 @@ async def verify_tray(payload: dict):
             compartments = {'full': tray}
             method = 'skip_split'
             vx, hy = 0, 0
+            s1 = stage1_sanity_check(tray, compartments)
         elif corners and manual_dividers:
             # Validate and use manual coordinates
             corners_arr = np.array(corners, dtype=int)
@@ -225,11 +240,10 @@ async def verify_tray(payload: dict):
             hy = max(5, min(tray.shape[0]-5, int(manual_dividers.get('horiz_y', tray.shape[0]//2))))
             compartments = extract_manual_compartments(tray, vx, hy)
             method = 'manual'
+            s1 = stage1_sanity_check(tray, compartments)
         else:
             tray, compartments, vx, hy, method = process_tray_image(image)
-
-        # Step 2: Stage 1 sanity check
-        s1 = stage1_sanity_check(tray, compartments)
+            s1 = stage1_sanity_check(tray, compartments)
 
         checklist = set_config.get('checklist', [])
 
@@ -283,6 +297,7 @@ async def verify_tray(payload: dict):
                 'detection_method': method,
                 'sent_checklist': checklist,
                 'n_compartments': len([k for k in compartments if k != 'full']),
+                'thought_process': result.get('thought_process', ''),
             },
         }
 
