@@ -209,7 +209,6 @@ async def verify_tray(payload: dict):
                 
             rotate_angle = int(payload.get('rotate_crop', 0))
             if rotate_angle:
-                import cv2
                 if rotate_angle == 90:
                     tray = cv2.rotate(tray, cv2.ROTATE_90_CLOCKWISE)
                 elif rotate_angle == 180:
@@ -228,7 +227,6 @@ async def verify_tray(payload: dict):
             
             rotate_angle = int(payload.get('rotate_crop', 0))
             if rotate_angle:
-                import cv2
                 if rotate_angle == 90:
                     tray = cv2.rotate(tray, cv2.ROTATE_90_CLOCKWISE)
                 elif rotate_angle == 180:
