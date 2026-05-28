@@ -1,5 +1,5 @@
 // Service Worker — caches static assets for offline shell
-const CACHE = 'equip-v1';
+const CACHE = 'equip-v2';
 const STATIC = ['/', '/css/style.css', '/js/app.js', '/admin', '/dashboard'];
 
 self.addEventListener('install', e => {
