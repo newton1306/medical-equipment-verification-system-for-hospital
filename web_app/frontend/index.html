@@ -35,6 +35,20 @@
     </nav>
 
     <main class="container">
+        <!-- Version Selector -->
+        <div class="version-selector-container">
+            <button class="version-tab active" id="tab-v2" onclick="setVersion(2)">
+                <span class="tab-icon">✨</span>
+                <span class="tab-title">เวอร์ชัน 2 (แนะนำ)</span>
+                <span class="tab-subtitle">ภาพเต็มใบความแม่นยำสูง | ทุกรูปทรง</span>
+            </button>
+            <button class="version-tab" id="tab-v1" onclick="setVersion(1)">
+                <span class="tab-icon">✂️</span>
+                <span class="tab-title">เวอร์ชัน 1</span>
+                <span class="tab-subtitle">ตัดแต่ง / แบ่งถาดย่อย 3 ช่อง</span>
+            </button>
+        </div>
+
         <!-- Step 1: Select Set -->
         <section id="step-select" class="card">
             <div class="step-badge">1</div>
@@ -86,7 +100,7 @@
 
             <!-- Preview Output -->
             <div id="preview-container" class="preview-container hidden">
-                <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px;">
+                <div id="preview-hint-text" style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px;">
                     ลากจุดกลมสีเขียวทั้ง 4 มุม เพื่อครอบขอบถาดสแตนเลสให้พอดี
                 </div>
                 <div id="boundary-editor-container" style="position:relative; width:100%; touch-action:none; margin: 0 auto; overflow: hidden; border-radius: 8px;">

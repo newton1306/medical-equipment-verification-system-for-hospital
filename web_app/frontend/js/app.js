@@ -9,6 +9,7 @@ let sets = [];
 let selectedSet = null;
 let capturedImageBase64 = null;
 let webcamStream = null;
+let activeVersion = 2; // Default is Version 2
 
 // DOM
 const checklistPreview = document.getElementById('checklist-preview');
@@ -72,9 +73,50 @@ btnLogin.addEventListener('click', async () => {
     }
 });
 
+// ── Version Selection ──
+window.setVersion = function(v) {
+    activeVersion = v;
+    
+    const tabV1 = document.getElementById('tab-v1');
+    const tabV2 = document.getElementById('tab-v2');
+    if (activeVersion === 1) {
+        tabV1.classList.add('active');
+        tabV2.classList.remove('active');
+    } else {
+        tabV2.classList.add('active');
+        tabV1.classList.remove('active');
+    }
+    
+    updateVersionUI();
+}
+
+function updateVersionUI() {
+    const btnDetect = document.getElementById('btn-detect');
+    const btnVerifyDirect = document.getElementById('btn-verify-direct');
+    const bCanvas = document.getElementById('boundary-canvas');
+    const previewHintText = document.getElementById('preview-hint-text');
+    
+    if (!previewHintText) return;
+    
+    if (activeVersion === 2) {
+        btnDetect.classList.add('hidden');
+        bCanvas.classList.add('hidden');
+        previewHintText.innerHTML = '✨ <b>เวอร์ชัน 2 (แนะนำ):</b> ระบบจะส่งรูปภาพเต็มใบความละเอียดสูงไปให้ AI ตรวจสอบโดยตรง (ไม่จำกัดรูปทรงถาด)';
+        btnVerifyDirect.innerHTML = '⚡ ตรวจสอบเต็มรูปทันที';
+        btnVerifyDirect.style.backgroundColor = 'var(--success)';
+    } else {
+        btnDetect.classList.remove('hidden');
+        bCanvas.classList.remove('hidden');
+        previewHintText.innerHTML = 'ลากจุดกลมสีเขียวทั้ง 4 มุม เพื่อครอบขอบถาดสแตนเลสให้พอดี';
+        btnVerifyDirect.innerHTML = '⚡ ตรวจสอบทันที (ส่งทั้งถาดจบงาน)';
+        btnVerifyDirect.style.backgroundColor = '';
+    }
+}
+
 
 // ── Init ──
 async function init() {
+    updateVersionUI();
     try {
         const res = await apiFetch(API + '/api/sets');
         sets = await res.json();
@@ -177,6 +219,16 @@ async function showPreview(src) {
     stepTrayPreview.classList.add('hidden');
     document.getElementById('capture-options').classList.add('hidden');
     document.getElementById('webcam-container').classList.add('hidden');
+    
+    updateVersionUI();
+    
+    if (activeVersion === 2) {
+        // Version 2 Bypass: Show preview immediately without detect_boundary wait
+        previewContainer.classList.remove('hidden');
+        boundaryOriginalSize = null;
+        displayCorners = null;
+        return;
+    }
     
     stepProcessing.classList.remove('hidden');
     processingStatus.textContent = 'วิเคราะห์ขอบเขตถาดสแตนเลส...';
@@ -538,7 +590,8 @@ btnVerifyDirect.addEventListener('click', async () => {
         image_base64: capturedImageBase64,
         skip_split: true,
         corners: getOriginalCorners(),
-        rotate_crop: 0 
+        rotate_crop: 0,
+        version: activeVersion
     };
     
     await executeVerify(payload);
@@ -552,7 +605,8 @@ btnVerify.addEventListener('click', async () => {
     const payload = {
         set_id: selectedSet.id,
         image_base64: capturedImageBase64,
-        rotate_crop: cropRotation
+        rotate_crop: cropRotation,
+        version: 1
     };
     if (trayData && trayData.corners) {
         payload.corners = trayData.corners;
