@@ -147,6 +147,11 @@ p { max-width: 70ch; text-wrap: pretty; }
     background-color: var(--bg-muted);
 }
 
+.nav-link:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
 .nav-link.active {
     color: var(--accent);
     background-color: var(--accent-muted);
@@ -175,8 +180,19 @@ p { max-width: 70ch; text-wrap: pretty; }
     color: var(--ink-inverse);
 }
 
+.btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
 .btn-primary:hover {
     background-color: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
 }
 
 .btn-outline {
@@ -188,6 +204,11 @@ p { max-width: 70ch; text-wrap: pretty; }
 .btn-outline:hover {
     background-color: var(--bg-muted);
     border-color: var(--ink-primary);
+    transform: translateY(-1px);
+}
+
+.btn-outline:active {
+    transform: translateY(0);
 }
 
 .btn-large {
@@ -560,8 +581,18 @@ select.form-input {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    padding: 1.25rem 0;
+    padding: 1.25rem;
+    margin: 0 -1.25rem;
+    border-radius: var(--radius-md);
+    transition: background-color var(--transition-fast);
+}
+
+.log-item:not(:last-child) {
     border-bottom: 1px solid var(--border);
+}
+
+.log-item:hover {
+    background-color: var(--bg-muted);
 }
 
 .log-info {
@@ -627,7 +658,36 @@ select.form-input {
     box-shadow: var(--shadow-md);
 }
 
-.modal-content h2 { margin-bottom: 1.5rem; }
+.modal-content h2 { margin-bottom: 1.5rem; padding-right: 2rem; }
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+}
+
+.modal-header h2 {
+    margin-bottom: 0;
+    padding-right: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--ink-secondary);
+    cursor: pointer;
+    padding: 0.5rem;
+    margin: -0.5rem -0.5rem 0 0;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.modal-close:hover {
+    background-color: var(--bg-muted);
+    color: var(--ink-primary);
+}
+
 .modal-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; }
 
 /* Utilities */

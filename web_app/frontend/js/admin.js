@@ -25,7 +25,7 @@ async function loadSets() {
             throw new Error(sets.detail || 'Invalid response from server');
         }
         if (sets.length === 0) {
-            el.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px">ยังไม่มี set — กด "+ เพิ่ม Set" ด้านบน</p>';
+            el.innerHTML = '<div style="text-align:center; padding: 4rem 1rem; color: var(--ink-secondary);"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:1rem; opacity:0.5;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg><p>ยังไม่มี Instrument Set</p><p class="text-small" style="margin-top:0.5rem;">กดปุ่ม "Add Set" ด้านบนเพื่อเริ่มต้น</p></div>';
             return;
         }
     el.innerHTML = sets.map(s => {
