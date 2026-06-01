@@ -37,18 +37,16 @@ async function loadSets() {
             return `<span class="checklist-chip ${i.mode}">${qtyStr}${nName}</span>`;
         }).join('');
         return `
-        <div class="set-card">
-            <div class="set-card-header">
-                <div>
-                    <div class="set-card-title">${s.display_name} ${s.display_name_th ? '(' + s.display_name_th + ')' : ''}</div>
-                    <div class="set-card-id">${s.id} · ${n} items</div>
-                </div>
-                <div class="set-card-actions">
-                    <button class="btn btn-outline btn-sm" onclick="openEditModal('${s.id}')">แก้ไข</button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteSet('${s.id}')">ลบ</button>
-                </div>
+        <div class="admin-item">
+            <div>
+                <div class="admin-item-title">${s.display_name} ${s.display_name_th ? '(' + s.display_name_th + ')' : ''}</div>
+                <div class="admin-item-id">${s.id} · ${n} items</div>
+                <div class="checklist-preview mt-4">${items}</div>
             </div>
-            <div class="checklist-preview">${items}</div>
+            <div style="display:flex; gap: 0.5rem; flex-direction:column;">
+                <button class="btn btn-outline" style="padding:0.5rem; font-size:0.8125rem;" onclick="openEditModal('${s.id}')">Edit</button>
+                <button class="btn btn-outline" style="padding:0.5rem; font-size:0.8125rem; color:var(--fail); border-color:var(--fail);" onclick="deleteSet('${s.id}')">Delete</button>
+            </div>
         </div>`;
     }).join('');
     } catch (e) {

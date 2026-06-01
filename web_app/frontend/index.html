@@ -1,245 +1,193 @@
 <!DOCTYPE html>
 <html lang="th">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#FFFFFF">
-    <meta name="description" content="AI Surgical Instrument Verification System — ระบบตรวจสอบเครื่องมือแพทย์ด้วย AI">
+    <meta name="theme-color" content="#FAFAFB">
+    <meta name="description" content="AI Surgical Instrument Verification System">
     <link rel="manifest" href="/manifest.json">
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
-    <title>Equipment Verify — CSSD</title>
+    <title>Equipment Verify</title>
 </head>
-
 <body>
+
     <!-- Login Overlay -->
-    <div id="login-overlay" class="login-overlay hidden">
-        <div class="login-card">
-            <h2>🔒 เข้าสู่ระบบ (Login)</h2>
-            <p>กรุณาใส่รหัสผ่านเพื่อใช้งานระบบตรวจสอบอุปกรณ์</p>
-            <input type="password" id="login-password" placeholder="รหัสผ่าน" class="select-large"
-                style="margin:1rem 0;">
-            <button id="btn-login" class="btn btn-primary btn-large">เข้าสู่ระบบ</button>
-            <p id="login-error" style="color:#ef4444; margin-top:1rem;"></p>
+    <div id="login-overlay" class="modal-overlay hidden">
+        <div class="modal-content" style="text-align: center;">
+            <h2>🔒 Authentication Required</h2>
+            <p class="text-muted" style="margin-bottom: 2rem;">Please enter the system password to access the verification tools.</p>
+            <div class="form-group">
+                <input type="password" id="login-password" placeholder="Password" class="form-input" style="text-align: center;">
+            </div>
+            <button id="btn-login" class="btn btn-primary btn-large">Login</button>
+            <p id="login-error" style="color: var(--fail); margin-top: 1rem;"></p>
         </div>
     </div>
 
-    <!-- Version Selection Landing Overlay -->
-    <div id="version-landing-overlay" class="version-landing-overlay hidden">
-        <div class="version-landing-container">
-            <h1 class="version-landing-title">🏥 Surgical Verify System</h1>
-            <p class="version-landing-subtitle">กรุณาเลือกเทคโนโลยีปัญญาประดิษฐ์ (AI) ในการตรวจสอบเครื่องมือแพทย์</p>
+    <!-- Version Landing Overlay (Simplifying for cleaner UX, but keeping IDs) -->
+    <div id="version-landing-overlay" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2>Select Engine Version</h2>
+            <p class="text-muted mb-4">Choose the verification engine that suits your current tray format.</p>
             
-            <div class="version-landing-cards">
-                <!-- Version 2 Card -->
-                <div class="version-landing-card v2" onclick="selectLandingVersion(2)">
-                    <span class="card-badge">แนะนำ (Recommended)</span>
-                    <div class="card-header">
-                        <span class="card-icon">✨</span>
-                        <div class="card-title">V2: Smart Full-Image AI<br><small style="font-size:0.75rem;font-weight:normal;opacity:0.8;">ภาพเต็มความแม่นยำสูง</small></div>
-                    </div>
-                    <p class="card-description">วิเคราะห์ถาดเครื่องมือแพทย์ทั้งใบโดยตรงโดยไม่ต้องครอปตัดแบ่งช่อง รองรับทุกรูปทรง</p>
-                    <ul class="card-bullets">
-                        <li><b>ประมวลผลเร็วสูงสุด:</b> วิเคราะห์เสร็จสิ้นภายใน 3-5 วินาที</li>
-                        <li><b>ถาดทุกรูปทรง:</b> รองรับทรงกลม ตะแกรงสแตนเลส หรือตะกร้าตาข่าย</li>
-                        <li><b>Chain of Thought:</b> คิดอย่างเป็นขั้นตอน แสดงเหตุผลการนับในระบบ Debug</li>
-                        <li><b>ขั้นตอนลดรูป:</b> ไม่ต้องเสียเวลาจัดตำแหน่ง ครอบมุม หรือลากพิกัดเส้นแบ่ง</li>
-                    </ul>
-                    <button class="btn-card-select">ใช้งานรุ่นแนะนำ V2</button>
-                </div>
-                
-                <!-- Version 1 Card -->
-                <div class="version-landing-card" onclick="selectLandingVersion(1)">
-                    <div class="card-header" style="margin-top:28px;">
-                        <span class="card-icon">✂️</span>
-                        <div class="card-title">V1: Compartment Crop & Split<br><small style="font-size:0.75rem;font-weight:normal;opacity:0.8;">ระบบดั้งเดิม 3 ช่องย่อย</small></div>
-                    </div>
-                    <p class="card-description">อัลกอริทึมตัดขอบถาดสแตนเลสและแบ่งส่วนออกเป็น 3 ส่วนแนวตั้งส่งไปให้ AI ประมวลผลทีละช่อง</p>
-                    <ul class="card-bullets">
-                        <li><b>เหมาะสำหรับ:</b> ถาดมาตรฐานที่ออกแบบแบ่ง 3 ส่วนชัดเจน</li>
-                        <li><b>การแยกภาพ:</b> ตรวจจับวิเคราะห์อุปกรณ์แยกตามช่องย่อย</li>
-                        <li><b>ต้องตั้งค่า:</b> ผู้ใช้ต้องลากจัดมุมกลม 4 ทิศ และปรับพิกัดเส้นประ</li>
-                    </ul>
-                    <button class="btn-card-select">ใช้งานรุ่นดั้งเดิม V1</button>
-                </div>
+            <div style="display:flex; flex-direction:column; gap:1rem;">
+                <button class="btn btn-primary btn-large" onclick="selectLandingVersion(2)">
+                    V2: Smart Full-Image AI (Recommended)
+                </button>
+                <button class="btn btn-outline btn-large" onclick="selectLandingVersion(1)">
+                    V1: Legacy 3-Compartment Split
+                </button>
             </div>
         </div>
     </div>
 
+    <!-- Navigation -->
     <nav class="nav">
-        <div class="nav-brand">
-            <span class="brand-long">🏥 Equipment Verify</span>
-            <span class="brand-short">🏥 Verify</span>
-        </div>
+        <div class="nav-brand">🏥 Verify</div>
         <div class="nav-links">
-            <a href="/" class="nav-link active">ตรวจสอบ</a>
-            <a href="/admin" class="nav-link">จัดการ Set</a>
+            <a href="/" class="nav-link active">Verify</a>
+            <a href="/admin" class="nav-link">Sets</a>
             <a href="/dashboard" class="nav-link">Dashboard</a>
-            <button id="btn-version-pill" class="btn-version-pill" onclick="showVersionSelector()">✨ V2</button>
+            <button id="btn-version-pill" class="btn btn-outline" style="padding: 0.25rem 0.75rem; font-size: 0.75rem; border-radius: var(--radius-pill);" onclick="showVersionSelector()">V2</button>
         </div>
     </nav>
 
     <main class="container">
-        <!-- Version Selector -->
-        <div class="version-selector-container">
-            <button class="version-tab active" id="tab-v2" onclick="setVersion(2)">
-                <span class="tab-icon">✨</span>
-                <span class="tab-title">เวอร์ชัน 2 (แนะนำ)</span>
-                <span class="tab-subtitle">ภาพเต็มใบความแม่นยำสูง | ทุกรูปทรง</span>
-            </button>
-            <button class="version-tab" id="tab-v1" onclick="setVersion(1)">
-                <span class="tab-icon">✂️</span>
-                <span class="tab-title">เวอร์ชัน 1</span>
-                <span class="tab-subtitle">ตัดแต่ง / แบ่งถาดย่อย 3 ช่อง</span>
-            </button>
+
+        <!-- Hidden Version Selector Tabs (Used by JS) -->
+        <div class="hidden" style="display: none;">
+            <button id="tab-v2" onclick="setVersion(2)"></button>
+            <button id="tab-v1" onclick="setVersion(1)"></button>
         </div>
 
-        <!-- Step 1: Select Set -->
-        <section id="step-select" class="card">
-            <div class="step-badge">1</div>
-            <div class="step-content">
-                <div id="set-grid" class="set-grid">
-                    <!-- Cards injected by JS -->
-                    <div style="text-align:center; padding: 2rem; color: var(--text-muted)">กำลังโหลด...</div>
-                </div>
-                <div id="checklist-preview" class="checklist-preview"></div>
+        <!-- Section 1: Select Set -->
+        <section id="step-select" class="view-section active">
+            <header>
+                <h1>Select Instrument Set</h1>
+                <p class="text-muted">Choose the type of tray you are preparing for sterilization.</p>
+            </header>
+            
+            <div id="set-grid" class="set-grid">
+                <!-- JS Inject -->
+                <p class="text-muted">Loading sets...</p>
             </div>
+            
+            <div id="checklist-preview" class="checklist-preview"></div>
         </section>
 
-        <!-- Step 2: Capture -->
-        <section id="step-capture" class="card hidden">
-            <div class="step-badge">2</div>
-            <h2>ถ่ายภาพถาดเครื่องมือ</h2>
+        <!-- Section 2: Capture -->
+        <section id="step-capture" class="view-section">
+            <header>
+                <h2>Capture Tray Image</h2>
+                <p class="text-muted">Ensure the entire tray is well-lit and clearly visible within the frame.</p>
+            </header>
 
-            <!-- Camera options -->
-            <div id="capture-options" class="capture-options">
-                <!-- Mobile Native Camera -->
-                <label for="mobile-camera-input" class="capture-btn">
-                    <span class="capture-icon">📱</span>
-                    <span>เปิดกล้องมือถือ</span>
+            <div id="capture-options" class="capture-grid">
+                <label for="mobile-camera-input" class="capture-action">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                    Mobile Camera
                 </label>
                 <input type="file" id="mobile-camera-input" accept="image/*" capture="environment" class="hidden-input">
 
-                <!-- WebRTC camera (works on desktop/HTTPS) -->
-                <button id="btn-webcam" class="capture-btn" onclick="startWebcam()">
-                    <span class="capture-icon">💻</span>
-                    <span>เปิดกล้องเว็บแคม</span>
+                <button id="btn-webcam" class="capture-action" onclick="startWebcam()" style="background:transparent; font-family:inherit; font-size:inherit;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><path d="M8 21h8"></path><path d="M12 17v4"></path></svg>
+                    Webcam
                 </button>
 
-                <!-- File Picker / Gallery -->
-                <label for="file-upload-input" class="capture-btn">
-                    <span class="capture-icon">📂</span>
-                    <span>เลือกรูปภาพ</span>
+                <label for="file-upload-input" class="capture-action">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    Upload File
                 </label>
                 <input type="file" id="file-upload-input" accept="image/*" class="hidden-input">
             </div>
 
-            <!-- Webcam live view -->
-            <div id="webcam-container" class="webcam-container hidden">
+            <div id="webcam-container" class="media-container hidden mt-4">
                 <video id="webcam-video" autoplay playsinline></video>
-                <div class="webcam-actions">
-                    <button class="btn btn-outline" onclick="stopWebcam()">ยกเลิก</button>
-                    <button class="btn btn-primary" onclick="captureWebcam()">📸 ถ่าย</button>
+                <div class="media-actions" style="padding: 1rem; justify-content: center; background: #fff; border-top: 1px solid var(--border);">
+                    <button class="btn btn-outline" onclick="stopWebcam()">Cancel</button>
+                    <button class="btn btn-primary" onclick="captureWebcam()">Capture</button>
                 </div>
             </div>
 
-            <!-- Preview Output -->
-            <div id="preview-container" class="preview-container hidden">
-                <div id="preview-hint-text" style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px;">
-                    ลากจุดกลมสีเขียวทั้ง 4 มุม เพื่อครอบขอบถาดสแตนเลสให้พอดี
+            <div id="preview-container" class="hidden mt-4">
+                <div style="position: relative; width: 100%; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border);">
+                    <img id="preview-image" src="" alt="Preview" style="display:block; width:100%;">
+                    <canvas id="boundary-canvas"></canvas>
                 </div>
-                <div id="boundary-editor-container" class="boundary-editor-container">
-                    <img id="preview-image" src="" alt="Preview" style="display:block; width:100%; height:auto;">
-                    <canvas id="boundary-canvas" style="position:absolute; top:0; left:0; width:100%; height:100%; touch-action:none;"></canvas>
+                <p class="text-small text-muted mt-4 text-center">Drag the four corners to frame the tray precisely.</p>
+                <div class="flex-row mt-4">
+                    <button class="btn btn-outline flex-1" id="btn-retake">Retake</button>
+                    <button class="btn btn-outline flex-1" id="btn-detect">Split (V1)</button>
                 </div>
-                <div class="preview-actions" style="display:flex; flex-direction:column; gap:8px; margin-top:16px;">
-                    <button class="btn btn-primary btn-large" id="btn-verify-direct" style="background-color: var(--success); width:100%">⚡ ตรวจสอบทันที (ส่งทั้งถาดจบงาน)</button>
-                    <div style="display:flex; gap:8px; width:100%;">
-                        <button class="btn btn-outline" id="btn-retake" style="flex:1">📷 ถ่ายใหม่</button>
-                        <button class="btn btn-outline" id="btn-detect" style="flex:1">✂️ ตัดแบ่งช่อง (Option 2)</button>
-                    </div>
-                </div>
+                <button class="btn btn-primary btn-large mt-4" id="btn-verify-direct">Verify Entire Tray</button>
             </div>
         </section>
 
-        <!-- Step 2.5: Tray Detection Preview -->
-        <section id="step-tray-preview" class="card hidden">
-            <div class="step-badge" style="background:#F59E0B">!</div>
-            <h2>แบ่งช่องตาราง (Option 2)</h2>
-            <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px; background:var(--bg-secondary); padding:10px; border-radius:8px; border:1px solid var(--border);">
-                💡 <b>คำแนะนำ:</b> ถ้าถาดเป็นแนวตั้ง ให้กดปุ่ม <b>หมุน ↻</b> (ในหน้าลากเส้นแบ่ง) เพื่อให้ "ช่องใหญ่สุด" หมุนไปอยู่ทางฝั่งขวามือก่อนทำงาน
+        <!-- Section 2.5: Tray Preview (V1) -->
+        <section id="step-tray-preview" class="view-section">
+            <header>
+                <h2>Adjust Compartments (V1)</h2>
+                <p class="text-muted">Adjust the divider lines to split the tray into 3 compartments.</p>
+            </header>
+            
+            <div id="tray-preview-img" style="position: relative; overflow: hidden; border-radius: var(--radius-md); border: 1px solid var(--border);"></div>
+            <div id="tray-compartments" style="display: flex; gap: 0.5rem; margin-top: 1rem;"></div>
+            
+            <div class="flex-row mt-4">
+                <button class="btn btn-outline flex-1" onclick="backToCapture()">Retake</button>
+                <button class="btn btn-outline flex-1" id="btn-rotate-tray">Rotate ↻</button>
             </div>
-            <p class="tray-hint" style="margin-bottom:8px;">เลื่อนจุดเส้นประเพื่อปรับเส้นแบ่งลากย่อย 3 ช่อง</p>
-            <div id="tray-preview-img" class="tray-preview-img"></div>
-            <div id="tray-compartments" class="compartment-grid"></div>
-            <div class="preview-actions" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
-                <div style="display:flex; gap:8px; width:100%;">
-                    <button class="btn btn-outline" onclick="backToCapture()" style="flex:1">📷 ถ่ายใหม่</button>
-                    <button class="btn btn-outline" id="btn-rotate-tray" style="flex:1">หมุน ↻</button>
-                </div>
-                <button class="btn btn-primary btn-large" id="btn-verify" style="width:100%">✅ ยืนยันตรวจสอบ</button>
+            <button class="btn btn-primary btn-large mt-4" id="btn-verify">Confirm & Verify</button>
+        </section>
+
+        <!-- Section 3: Processing -->
+        <section id="step-processing" class="view-section">
+            <div class="loader-wrapper">
+                <div class="spinner"></div>
+                <h2>Analyzing Tray</h2>
+                <p class="text-muted" id="processing-status">Calling AI Vision engine...</p>
             </div>
         </section>
 
-        <!-- Step 3: Processing -->
-        <section id="step-processing" class="card hidden">
-            <div class="loader-container">
-                <div class="loader"></div>
-                <p class="loader-text">กำลังตรวจสอบ...</p>
-                <p class="loader-sub" id="processing-status">Calling Gemini AI...</p>
-            </div>
-        </section>
-
-        <!-- Step 4: Results -->
-        <section id="step-results" class="card hidden">
-            <div class="step-badge">3</div>
-            <h2>ผลการตรวจสอบ</h2>
-
+        <!-- Section 4: Results -->
+        <section id="step-results" class="view-section">
+            
             <div id="result-banner" class="result-banner">
                 <span id="result-status" class="result-status"></span>
                 <span id="result-confidence" class="result-confidence"></span>
             </div>
 
-            <div id="compartment-grid" class="compartment-grid"></div>
-            <div id="items-table-container" class="items-table-container"></div>
-            <div id="missing-extra" class="missing-extra"></div>
-            <div id="result-reason" class="result-reason"></div>
-            <div id="result-meta" class="result-meta"></div>
+            <div id="missing-extra" class="findings-section"></div>
 
-            <!-- Debug info (collapsed) -->
-            <details class="debug-details">
-                <summary>🔧 Debug Info</summary>
-                <pre id="debug-info" class="debug-pre"></pre>
+            <div id="items-table-container"></div>
+            
+            <div id="compartment-grid" style="display:flex; gap:0.5rem; margin-bottom:1rem;"></div>
+
+            <div class="clinical-warning">
+                <h4>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    Clinical Warning
+                </h4>
+                <p>AI verification is assistive. Please manually cross-check similar instruments (e.g., Tooth vs. Non-tooth forceps) and ensure Chemical Indicators are placed before packing.</p>
+            </div>
+
+            <div id="result-reason" style="font-size: 0.875rem; color: var(--ink-secondary); padding: 1rem; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 1rem;"></div>
+            <div id="result-meta" class="text-small text-muted text-right mb-4"></div>
+
+            <details style="margin-bottom: 2rem;">
+                <summary style="font-size: 0.875rem; color: var(--ink-secondary); cursor: pointer;">Developer Debug Info</summary>
+                <pre id="debug-info" style="font-size: 0.75rem; padding: 1rem; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); overflow-x: auto; margin-top: 0.5rem;"></pre>
             </details>
 
-            <!-- WARNINGS -->
-            <div class="warnings-section">
-                <div class="warning-card warning-caution">
-                    <div class="warning-icon">⚠️</div>
-                    <div class="warning-text">
-                        <strong>ระวัง! อย่าลืมกระดาษทดสอบสาร (Chemical Indicator)</strong>
-                        <p>ตรวจสอบว่าใส่แล้วก่อนห่อ — AI ไม่ได้ตรวจสอบชิ้นนี้</p>
-                    </div>
-                </div>
-                <div class="warning-card warning-important">
-                    <div class="warning-icon">🔍</div>
-                    <div class="warning-text">
-                        <strong>กรุณาเช็คอุปกรณ์ที่คล้ายกันอีกครั้งด้วยตนเอง</strong>
-                        <p>เช่น Tooth vs Non-tooth forceps, Mayo vs Metzenbaum scissors<br>
-                            ผลจาก AI เป็นเพียงตัวช่วย ไม่ใช่การตรวจสอบขั้นสุดท้าย</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="result-actions" style="display:flex; flex-direction:column; gap:8px;">
-                <button id="btn-retake-result" class="btn btn-outline btn-large">📷 ถ่ายใหม่ (Set เดิม)</button>
-                <button id="btn-next" class="btn btn-primary btn-large">🔄 เลือก Set ถัดไป</button>
+            <div class="flex-row">
+                <button id="btn-retake-result" class="btn btn-outline flex-1">Retake Image</button>
+                <button id="btn-next" class="btn btn-primary flex-1">Next Tray</button>
             </div>
         </section>
+
     </main>
 
     <script src="/js/app.js"></script>
 </body>
-
 </html>

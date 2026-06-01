@@ -1,75 +1,80 @@
 <!DOCTYPE html>
 <html lang="th">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#FFFFFF">
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#FAFAFB">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
     <title>Admin — Equipment Verify</title>
 </head>
-
 <body>
     <nav class="nav">
-        <div class="nav-brand">🏥 Equipment Verify</div>
+        <div class="nav-brand">🏥 Verify</div>
         <div class="nav-links">
-            <a href="/" class="nav-link">ตรวจสอบ</a>
-            <a href="/admin" class="nav-link active">จัดการ Set</a>
+            <a href="/" class="nav-link">Verify</a>
+            <a href="/admin" class="nav-link active">Sets</a>
             <a href="/dashboard" class="nav-link">Dashboard</a>
         </div>
     </nav>
     <main class="container">
-        <div class="admin-header">
-            <h1 style="font-size:1.3rem">⚙️ จัดการชุดเครื่องมือ</h1>
-            <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ เพิ่ม Set</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>Instrument Sets</h1>
+            <button class="btn btn-primary" onclick="openAddModal()">Add Set</button>
         </div>
-        <div id="sets-list"></div>
+        <div id="sets-list" class="admin-list"></div>
     </main>
 
     <!-- Modal -->
-    <div id="modal-backdrop" class="modal-backdrop hidden" onclick="closeModal(event)">
-        <div class="modal" onclick="event.stopPropagation()">
-            <h3 id="modal-title">เพิ่ม Set ใหม่</h3>
+    <div id="modal-backdrop" class="modal-overlay hidden" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2 id="modal-title">New Instrument Set</h2>
+            
             <div class="form-group">
-                <label>ID (ภาษาอังกฤษ, ห้ามเว้นวรรค)</label>
+                <label class="form-label">Set ID (e.g. dressing_set)</label>
                 <input class="form-input" id="f-id" placeholder="dressing_set">
             </div>
+            
             <div class="form-group">
-                <label>ชื่อ (EN)</label>
+                <label class="form-label">Name (EN)</label>
                 <input class="form-input" id="f-name" placeholder="Dressing Set">
             </div>
+            
             <div class="form-group">
-                <label>ชื่อ (TH)</label>
+                <label class="form-label">Name (TH)</label>
                 <input class="form-input" id="f-name-th" placeholder="ชุดทำแผล">
             </div>
+            
             <div class="form-group">
-                <label>Reference Image URL</label>
+                <label class="form-label">Reference Image URL</label>
                 <input class="form-input" id="f-ref-url" placeholder="https://...">
             </div>
-            <div class="form-group" style="margin-top:20px; border-top:1px solid var(--border); padding-top:16px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
-                    <label style="margin:0">Checklist อุปกรณ์</label>
-                    <div style="display:flex; gap: 8px;">
-                        <button class="btn btn-outline btn-sm" id="btn-toggle-json" onclick="toggleJsonMode()">สลับโหมด JSON</button>
-                        <button class="btn btn-outline btn-sm" id="btn-add-item" onclick="addChecklistItem()">+ เพิ่มอุปกรณ์</button>
+            
+            <div class="form-group" style="margin-top:2rem; padding-top:1.5rem; border-top: 1px solid var(--border);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <label class="form-label" style="margin:0;">Equipment Checklist</label>
+                    <div style="display:flex; gap: 0.5rem;">
+                        <button class="btn btn-outline" style="padding: 0.5rem 0.75rem; font-size: 0.8125rem;" id="btn-toggle-json" onclick="toggleJsonMode()">JSON Mode</button>
+                        <button class="btn btn-outline" style="padding: 0.5rem 0.75rem; font-size: 0.8125rem;" id="btn-add-item" onclick="addChecklistItem()">Add Item</button>
                     </div>
                 </div>
+                
                 <!-- Form Mode -->
-                <div id="checklist-items-container" style="display:flex; flex-direction:column; gap:8px;">
+                <div id="checklist-items-container" style="display:flex; flex-direction:column; gap:0.5rem;">
                     <!-- Items injected by JS -->
                 </div>
+                
                 <!-- JSON Mode -->
-                <textarea class="form-input hidden" id="f-checklist" rows="8" placeholder='[{"item_name":"Tooth forceps","quantity":1,"mode":"exact"}]'></textarea>
+                <textarea class="form-input hidden" id="f-checklist" rows="8" placeholder='[{"item_name":"Tooth forceps","quantity":1,"mode":"exact"}]' style="font-family: monospace; resize: vertical;"></textarea>
             </div>
-            <div class="modal-actions" style="margin-top:24px;">
-                <button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
-                <button class="btn btn-primary" id="btn-save" onclick="saveSet()">บันทึก</button>
+            
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" id="btn-save" onclick="saveSet()">Save Set</button>
             </div>
         </div>
     </div>
 
     <script src="/js/admin.js"></script>
 </body>
-
 </html>

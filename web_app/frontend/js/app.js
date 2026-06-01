@@ -744,10 +744,10 @@ function renderResults(data) {
     if (data.items && data.items.length > 0) {
         let rows = data.items.map(it => {
             const cls = it.ok ? 'ok' : 'fail';
-            return `<tr class="${cls}">
-                <td><span class="status-dot ${cls}"></span>${it.item}</td>
+            return `<tr>
+                <td><span class="status-cell ${cls}">${it.item}</span></td>
                 <td>${it.expected}</td><td>${it.found}</td>
-                <td>${it.ok ? 'OK' : 'FAIL'}</td></tr>`;
+                <td class="status-cell ${cls}">${it.ok ? 'OK' : 'FAIL'}</td></tr>`;
         }).join('');
         tc.innerHTML = `<table class="items-table">
             <thead><tr><th>Item</th><th>Expected</th><th>Found</th><th>Status</th></tr></thead>
@@ -760,14 +760,14 @@ function renderResults(data) {
     const me = document.getElementById('missing-extra');
     let meHtml = '';
     if (data.missing?.length) {
-        meHtml += '<div style="margin-bottom:6px"><strong style="color:var(--danger);font-size:0.8rem">Missing:</strong> ';
-        meHtml += data.missing.map(m => `<span class="tag tag-missing">${m}</span>`).join('');
-        meHtml += '</div>';
+        meHtml += '<div class="finding-group"><div class="finding-title missing">Missing Items</div><ul class="finding-list missing">';
+        meHtml += data.missing.map(m => `<li>${m}</li>`).join('');
+        meHtml += '</ul></div>';
     }
     if (data.extra?.length) {
-        meHtml += '<div><strong style="color:var(--warning);font-size:0.8rem">Extra:</strong> ';
-        meHtml += data.extra.map(m => `<span class="tag tag-extra">${m}</span>`).join('');
-        meHtml += '</div>';
+        meHtml += '<div class="finding-group"><div class="finding-title extra">Extra Items</div><ul class="finding-list extra">';
+        meHtml += data.extra.map(m => `<li>${m}</li>`).join('');
+        meHtml += '</ul></div>';
     }
     me.innerHTML = meHtml;
 

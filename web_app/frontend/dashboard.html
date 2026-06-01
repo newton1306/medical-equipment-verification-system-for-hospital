@@ -3,33 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#FFFFFF">
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#FAFAFB">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
     <title>Dashboard — Equipment Verify</title>
 </head>
 <body>
     <nav class="nav">
-        <div class="nav-brand">🏥 Equipment Verify</div>
+        <div class="nav-brand">🏥 Verify</div>
         <div class="nav-links">
-            <a href="/" class="nav-link">ตรวจสอบ</a>
-            <a href="/admin" class="nav-link">จัดการ Set</a>
+            <a href="/" class="nav-link">Verify</a>
+            <a href="/admin" class="nav-link">Sets</a>
             <a href="/dashboard" class="nav-link active">Dashboard</a>
         </div>
     </nav>
     <main class="container">
-        <h1 style="font-size:1.3rem;margin-bottom:16px">📊 Dashboard</h1>
-
-        <div class="stats-grid" id="stats-grid">
-            <div class="stat-card"><div class="stat-value">-</div><div class="stat-label">Total</div></div>
-            <div class="stat-card"><div class="stat-value pass">-</div><div class="stat-label">Pass</div></div>
-            <div class="stat-card"><div class="stat-value fail">-</div><div class="stat-label">Fail</div></div>
-            <div class="stat-card"><div class="stat-value">-</div><div class="stat-label">Pass Rate</div></div>
+        <div class="dashboard-header">
+            <h1>Metrics Dashboard</h1>
+            <div class="metrics-row" id="stats-grid">
+                <div class="metric"><span class="metric-value">-</span><span class="metric-label">Total Logs</span></div>
+                <div class="metric"><span class="metric-value pass">-</span><span class="metric-label">Pass</span></div>
+                <div class="metric"><span class="metric-value fail">-</span><span class="metric-label">Fail</span></div>
+                <div class="metric"><span class="metric-value">-</span><span class="metric-label">Pass Rate</span></div>
+            </div>
         </div>
 
-        <div class="card">
-            <h2 style="padding-left:0">Recent Verifications</h2>
-            <div id="recent-logs"></div>
+        <div>
+            <h2 style="margin-bottom: 1rem;">Recent Verifications</h2>
+            <div id="recent-logs" class="log-list"></div>
         </div>
     </main>
     <script>
@@ -47,52 +48,50 @@
             const d = await res.json();
             const grid = document.getElementById('stats-grid');
             grid.innerHTML = `
-                <div class="stat-card"><div class="stat-value">${d.total}</div><div class="stat-label">Total</div></div>
-                <div class="stat-card"><div class="stat-value pass">${d.pass_count}</div><div class="stat-label">Pass</div></div>
-                <div class="stat-card"><div class="stat-value fail">${d.fail_count}</div><div class="stat-label">Fail</div></div>
-                <div class="stat-card"><div class="stat-value">${d.pass_rate}%</div><div class="stat-label">Pass Rate</div></div>`;
+                <div class="metric"><span class="metric-value">${d.total}</span><span class="metric-label">Total Logs</span></div>
+                <div class="metric"><span class="metric-value pass">${d.pass_count}</span><span class="metric-label">Pass</span></div>
+                <div class="metric"><span class="metric-value fail">${d.fail_count}</span><span class="metric-label">Fail</span></div>
+                <div class="metric"><span class="metric-value">${d.pass_rate}%</span><span class="metric-label">Pass Rate</span></div>`;
 
             const logs = document.getElementById('recent-logs');
             if (!d.recent_logs || d.recent_logs.length === 0) {
-                logs.innerHTML = '<p style="color:var(--text-muted);padding:20px;text-align:center">ยังไม่มีข้อมูล</p>';
+                logs.innerHTML = '<p class="text-muted" style="padding: 2rem 0; text-align: center;">No verification logs found.</p>';
                 return;
             }
             logs.innerHTML = d.recent_logs.map(l => {
                 const status = (l.status || 'unknown').toLowerCase();
-                const time = l.created_at ? new Date(l.created_at).toLocaleString('th-TH') : '';
+                const time = l.created_at ? new Date(l.created_at).toLocaleString('en-GB') : '';
                 let detailsHtml = '';
                 
                 try {
                     if (l.vlm_response) {
                         const vlm = JSON.parse(l.vlm_response);
                         if (status === 'pass') {
-                            detailsHtml = `<div style="font-size:0.75rem; color:var(--success); margin-top:4px;">✨ อุปกรณ์ครบถ้วน (ไม่ต้องแก้ไข)</div>`;
+                            detailsHtml = `<div class="text-small" style="color: var(--pass); margin-top: 4px;">Complete matching.</div>`;
                         } else if (status === 'fail') {
                             const missingArray = vlm.missing || [];
                             const extraArray = vlm.extra || [];
                             let listsHtml = '';
                             if (missingArray.length) {
-                                listsHtml += `<div style="margin-top:4px; font-weight:bold;">❌ ขาด:</div><ul style="margin:2px 0 0 0; padding-left:16px;">` + missingArray.map(x => `<li style="margin-bottom:2px; list-style-type:disc;">${x}</li>`).join('') + `</ul>`;
+                                listsHtml += `<div style="color: var(--fail); font-weight: 600; margin-top:4px;">Missing: ${missingArray.join(', ')}</div>`;
                             }
                             if (extraArray.length) {
-                                listsHtml += `<div style="margin-top:4px; font-weight:bold;">⚠️ เกิน:</div><ul style="margin:2px 0 0 0; padding-left:16px;">` + extraArray.map(x => `<li style="margin-bottom:2px; list-style-type:disc;">${x}</li>`).join('') + `</ul>`;
+                                listsHtml += `<div style="color: var(--warn); font-weight: 600; margin-top:4px;">Extra: ${extraArray.join(', ')}</div>`;
                             }
-                            detailsHtml = `<div style="font-size:0.75rem; color:var(--danger); margin-top:4px;">${listsHtml}</div>`;
+                            detailsHtml = `<div class="text-small" style="margin-top: 4px;">${listsHtml}</div>`;
                         } else {
-                            detailsHtml = `<div style="font-size:0.75rem; color:var(--warning); margin-top:4px;">⚠️ กำกวม: ${vlm.reason || ''}</div>`;
+                            detailsHtml = `<div class="text-small" style="color: var(--warn); margin-top: 4px;">Uncertain: ${vlm.reason || ''}</div>`;
                         }
                     }
                 } catch(e) {}
 
-                return `<div class="log-item" style="display:flex; flex-direction:column; align-items:flex-start;">
-                    <div style="display:flex; justify-content:space-between; width:100%; align-items:flex-start;">
-                        <div>
-                            <strong style="font-size:0.95rem">${l.set_id}</strong>
-                            <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">${time} · ${l.model_used || 'AI'} · ${l.elapsed_sec || 0}s</div>
-                        </div>
-                        <span class="log-status ${status}">${l.status}</span>
+                return `<div class="log-item">
+                    <div class="log-info">
+                        <span class="log-title">${l.set_id}</span>
+                        <span class="log-meta">${time} · ${l.model_used || 'AI'} · ${l.elapsed_sec || 0}s</span>
+                        ${detailsHtml}
                     </div>
-                    ${detailsHtml}
+                    <span class="log-badge ${status}">${l.status.toUpperCase()}</span>
                 </div>`;
             }).join('');
         } catch (e) {
