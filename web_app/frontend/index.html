@@ -32,10 +32,10 @@
             <p class="text-muted mb-4">Choose the verification engine that suits your current tray format.</p>
             
             <div style="display:flex; flex-direction:column; gap:1rem;">
-                <button class="btn btn-primary btn-large" onclick="selectLandingVersion(2)">
+                <button class="btn btn-primary btn-large" style="white-space: normal; line-height: 1.4;" onclick="selectLandingVersion(2)">
                     V2: Smart Full-Image AI (Recommended)
                 </button>
-                <button class="btn btn-outline btn-large" onclick="selectLandingVersion(1)">
+                <button class="btn btn-outline btn-large" style="white-space: normal; line-height: 1.4;" onclick="selectLandingVersion(1)">
                     V1: Legacy 3-Compartment Split
                 </button>
             </div>
@@ -115,7 +115,7 @@
                     <img id="preview-image" src="" alt="Preview" style="display:block; width:100%;">
                     <canvas id="boundary-canvas"></canvas>
                 </div>
-                <p class="text-small text-muted mt-4 text-center">Drag the four corners to frame the tray precisely.</p>
+                <p id="preview-hint-text" class="text-small text-muted mt-4 text-center">Drag the four corners to frame the tray precisely.</p>
                 <div class="flex-row mt-4">
                     <button class="btn btn-outline flex-1" id="btn-retake">Retake</button>
                     <button class="btn btn-outline flex-1" id="btn-detect">Split (V1)</button>
@@ -162,7 +162,7 @@
 
             <div id="items-table-container"></div>
             
-            <div id="compartment-grid" style="display:flex; gap:0.5rem; margin-bottom:1rem;"></div>
+            <div id="compartment-grid" style="display:flex; gap:0.5rem;"></div>
 
             <div class="clinical-warning">
                 <h4>
@@ -172,10 +172,10 @@
                 <p>AI verification is assistive. Please manually cross-check similar instruments (e.g., Tooth vs. Non-tooth forceps) and ensure Chemical Indicators are placed before packing.</p>
             </div>
 
-            <div id="result-reason" style="font-size: 0.875rem; color: var(--ink-secondary); padding: 1rem; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 1rem;"></div>
-            <div id="result-meta" class="text-small text-muted text-right mb-4"></div>
+            <div id="result-reason" style="font-size: 0.875rem; color: var(--ink-secondary); padding: 1rem; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md);"></div>
+            <div id="result-meta" class="text-small text-muted text-right"></div>
 
-            <details style="margin-bottom: 2rem;">
+            <details>
                 <summary style="font-size: 0.875rem; color: var(--ink-secondary); cursor: pointer;">Developer Debug Info</summary>
                 <pre id="debug-info" style="font-size: 0.75rem; padding: 1rem; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); overflow-x: auto; margin-top: 0.5rem;"></pre>
             </details>
