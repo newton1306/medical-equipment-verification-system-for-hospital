@@ -668,10 +668,15 @@ btnVerifyDirect.addEventListener('click', async () => {
                 })
             });
             const data = await res.json();
-            if (!res.ok) throw new Error(data.detail || 'Verification failed');
+            if (!res.ok) {
+                let msg = data.detail || 'Verification failed';
+                if (typeof msg === 'object') msg = JSON.stringify(msg);
+                throw new Error(msg);
+            }
             renderResults(data);
         } catch (e) {
-            alert('Error: ' + e.message);
+            console.error(e);
+            alert('Error: ' + (e.message || JSON.stringify(e)));
             resetCapture();
         }
         return;
