@@ -143,7 +143,7 @@ function updateVersionUI() {
         bCanvas.classList.add('hidden');
         previewHintText.innerHTML = '✨ <b>เวอร์ชัน 2 (แนะนำ):</b> ระบบจะส่งรูปภาพเต็มใบความละเอียดสูงไปให้ AI ตรวจสอบโดยตรง (ไม่จำกัดรูปทรงถาด)';
         btnVerifyDirect.innerHTML = '⚡ ตรวจสอบเต็มรูปทันที';
-        btnVerifyDirect.style.backgroundColor = 'var(--success)';
+        btnVerifyDirect.style.backgroundColor = '';
     } else {
         btnDetect.classList.remove('hidden');
         bCanvas.classList.remove('hidden');
