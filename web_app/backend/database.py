@@ -28,7 +28,7 @@ async def get_all_sets() -> list[dict]:
             _url('instrument_sets'),
             headers=_headers(),
             params={
-                'select': 'id,display_name,display_name_th,created_at,updated_at,checklist:checklist_items(*)',
+                'select': 'id,display_name,display_name_th,created_at,updated_at,reference_image_url,checklist:checklist_items(*)',
                 'order': 'display_name.asc'
             },
         )
