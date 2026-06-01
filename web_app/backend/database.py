@@ -216,6 +216,15 @@ async def upload_reference_image(set_id: str, image_bytes: bytes) -> str:
     
     async with httpx.AsyncClient() as client:
         r = await client.post(url, headers=headers, content=image_bytes)
+        
+        # Auto-create bucket if not found
+        if r.status_code == 404 and "Bucket not found" in r.text:
+            bucket_url = f"{SUPABASE_URL}/storage/v1/bucket"
+            bucket_payload = {"id": "reference-images", "name": "reference-images", "public": True}
+            await client.post(bucket_url, headers={'apikey': SUPABASE_KEY, 'Authorization': f'Bearer {SUPABASE_KEY}'}, json=bucket_payload)
+            # Retry upload
+            r = await client.post(url, headers=headers, content=image_bytes)
+            
         if r.status_code not in (200, 201):
             raise Exception(f"Supabase Storage error: {r.text}")
         

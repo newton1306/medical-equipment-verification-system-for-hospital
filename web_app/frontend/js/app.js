@@ -443,8 +443,8 @@ async function startWebcam() {
         arOverlay.src = '';
     }
     
-    webcamContainer.classList.remove('hidden');
-        document.getElementById('capture-options').classList.add('hidden');
+    document.getElementById('webcam-container').classList.remove('hidden');
+    document.getElementById('capture-options').classList.add('hidden');
     } catch (e) {
         alert('ไม่สามารถเปิดเว็บแคมได้: ' + e.message + '\nกรุณาใช้ปุ่มเลือกรูปหรือกล้องมือถือแทนครับ');
     }
@@ -478,7 +478,7 @@ function resetCapture() {
         webcamStream.getTracks().forEach(t => t.stop());
         webcamStream = null;
     }
-    webcamContainer.classList.add('hidden');
+    document.getElementById('webcam-container').classList.add('hidden');
     document.getElementById('ar-overlay-image').classList.add('hidden');
     document.getElementById('capture-options').classList.remove('hidden');
     capturedImageBase64 = null;
