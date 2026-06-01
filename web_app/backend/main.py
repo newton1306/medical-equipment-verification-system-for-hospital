@@ -327,10 +327,16 @@ async def verify_tray(payload: dict):
         traceback.print_exc()
         raise HTTPException(500, f'Internal error: {str(e)[:200]}')
 
+from pydantic import BaseModel
+
+class V3Payload(BaseModel):
+    set_id: str
+    test_image_base64: str
+
 @app.post('/api/v3/verify-tray')
-async def verify_tray_v3_endpoint(payload: dict):
-    set_id = payload.get('set_id', '')
-    test_image_b64 = payload.get('test_image_base64', '')
+async def verify_tray_v3_endpoint(payload: V3Payload):
+    set_id = payload.set_id
+    test_image_b64 = payload.test_image_base64
     
     if not set_id or not test_image_b64:
         raise HTTPException(400, 'set_id and test_image_base64 required')
