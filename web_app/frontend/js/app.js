@@ -135,10 +135,18 @@ function updateVersionUI() {
     const btnVerifyDirect = document.getElementById('btn-verify-direct');
     const bCanvas = document.getElementById('boundary-canvas');
     const previewHintText = document.getElementById('preview-hint-text');
+    const btnVersionPill = document.getElementById('btn-version-pill');
     
     if (!previewHintText) return;
     
-    if (activeVersion === 2) {
+    if (activeVersion === 3) {
+        btnDetect.classList.add('hidden');
+        bCanvas.classList.add('hidden');
+        previewHintText.innerHTML = '✨ <b>เวอร์ชัน 3:</b> ใช้ระบบ AR ซ้อนภาพต้นฉบับเพื่อความแม่นยำสูงสุด';
+        btnVerifyDirect.innerHTML = '⚡ ตรวจสอบแบบ Dual-Image';
+        btnVerifyDirect.style.backgroundColor = '';
+        btnVersionPill.innerHTML = '✨ V3';
+    } else if (activeVersion === 2) {
         btnDetect.classList.add('hidden');
         bCanvas.classList.add('hidden');
         previewHintText.innerHTML = '✨ <b>เวอร์ชัน 2 (แนะนำ):</b> ระบบจะส่งรูปภาพเต็มใบความละเอียดสูงไปให้ AI ตรวจสอบโดยตรง (ไม่จำกัดรูปทรงถาด)';
@@ -268,8 +276,8 @@ async function showPreview(src) {
     
     updateVersionUI();
     
-    if (activeVersion === 2) {
-        // Version 2 Bypass: Show preview immediately without detect_boundary wait
+    if (activeVersion === 2 || activeVersion === 3) {
+        // Version 2/3 Bypass: Show preview immediately without detect_boundary wait
         previewContainer.classList.remove('hidden');
         boundaryOriginalSize = null;
         displayCorners = null;
@@ -424,7 +432,18 @@ async function startWebcam() {
         });
         const video = document.getElementById('webcam-video');
         video.srcObject = webcamStream;
-        document.getElementById('webcam-container').classList.remove('hidden');
+    
+    // Set AR Ghosting Overlay if available
+    const arOverlay = document.getElementById('ar-overlay-image');
+    if (selectedSet && selectedSet.reference_image_url) {
+        arOverlay.src = selectedSet.reference_image_url;
+        arOverlay.classList.remove('hidden');
+    } else {
+        arOverlay.classList.add('hidden');
+        arOverlay.src = '';
+    }
+    
+    webcamContainer.classList.remove('hidden');
         document.getElementById('capture-options').classList.add('hidden');
     } catch (e) {
         alert('ไม่สามารถเปิดเว็บแคมได้: ' + e.message + '\nกรุณาใช้ปุ่มเลือกรูปหรือกล้องมือถือแทนครับ');
@@ -455,9 +474,15 @@ function captureWebcam() {
 btnRetake.addEventListener('click', resetCapture);
 
 function resetCapture() {
+    if (webcamStream) {
+        webcamStream.getTracks().forEach(t => t.stop());
+        webcamStream = null;
+    }
+    webcamContainer.classList.add('hidden');
+    document.getElementById('ar-overlay-image').classList.add('hidden');
+    document.getElementById('capture-options').classList.remove('hidden');
     capturedImageBase64 = null;
     previewContainer.classList.add('hidden');
-    document.getElementById('capture-options').classList.remove('hidden');
     mobileCameraInput.value = '';
     fileUploadInput.value = '';
     stepTrayPreview.classList.add('hidden');
@@ -629,6 +654,28 @@ btnVerifyDirect.addEventListener('click', async () => {
     if (!selectedSet || !capturedImageBase64) return;
     previewContainer.classList.add('hidden');
     document.getElementById('capture-options').classList.add('hidden');
+    
+    if (activeVersion === 3) {
+        stepCapture.classList.add('hidden');
+        stepProcessing.classList.remove('hidden');
+        
+        try {
+            const res = await apiFetch(API + '/api/v3/verify-tray', {
+                method: 'POST',
+                body: JSON.stringify({
+                    set_id: selectedSet.id,
+                    test_image_base64: capturedImageBase64
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Verification failed');
+            renderResults(data);
+        } catch (e) {
+            alert('Error: ' + e.message);
+            resetCapture();
+        }
+        return;
+    }
     
     // Direct verification bypasses the option 2 rotation entirely
     const payload = {

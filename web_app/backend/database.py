@@ -202,3 +202,29 @@ async def get_dashboard_stats() -> dict:
         'daily': dict(sorted(daily.items(), reverse=True)[:7]),
         'recent_logs': logs[:10],
     }
+
+async def upload_reference_image(set_id: str, image_bytes: bytes) -> str:
+    """Upload image to Supabase Storage and return public URL."""
+    filename = f"ref_{set_id}_{int(datetime.utcnow().timestamp())}.jpg"
+    url = f"{SUPABASE_URL}/storage/v1/object/reference-images/{filename}"
+    
+    headers = {
+        'apikey': SUPABASE_KEY,
+        'Authorization': f'Bearer {SUPABASE_KEY}',
+        'Content-Type': 'image/jpeg'
+    }
+    
+    async with httpx.AsyncClient() as client:
+        r = await client.post(url, headers=headers, content=image_bytes)
+        if r.status_code not in (200, 201):
+            raise Exception(f"Supabase Storage error: {r.text}")
+        
+        public_url = f"{SUPABASE_URL}/storage/v1/object/public/reference-images/{filename}"
+        
+        # Update the set with the new URL
+        set_data = await get_set(set_id)
+        if set_data:
+            set_data['reference_image_url'] = public_url
+            await update_set(set_id, set_data)
+            
+        return public_url

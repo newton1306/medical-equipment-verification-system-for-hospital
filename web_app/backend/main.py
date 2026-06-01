@@ -27,6 +27,9 @@ from backend.services.v1.vlm_verifier import verify_with_vlm as verify_with_vlm_
 from backend.services.v2.sanity_checker import check_full_image_sanity as stage1_sanity_check_v2
 from backend.services.v2.vlm_verifier import verify_with_vlm as verify_with_vlm_v2
 
+# V3 imports (AR-Guided Dual-Image)
+from backend.services.v3.vlm_verifier import verify_tray_v3
+
 app = FastAPI(title='Surgical Instrument Verification', version='4.0')
 
 @app.middleware("http")
@@ -324,6 +327,72 @@ async def verify_tray(payload: dict):
         traceback.print_exc()
         raise HTTPException(500, f'Internal error: {str(e)[:200]}')
 
+@app.post('/api/v3/verify-tray')
+async def verify_tray_v3_endpoint(payload: dict):
+    set_id = payload.get('set_id', '')
+    test_image_b64 = payload.get('test_image_base64', '')
+    
+    if not set_id or not test_image_b64:
+        raise HTTPException(400, 'set_id and test_image_base64 required')
+
+    set_config = await db.get_set(set_id)
+    if set_config is None:
+        raise HTTPException(404, f'Set not found: {set_id}')
+        
+    try:
+        test_image = _decode_image(test_image_b64)
+        
+        ref_img = None
+        ref_url = set_config.get('reference_image_url', '')
+        if ref_url:
+            try:
+                import httpx
+                async with httpx.AsyncClient() as client:
+                    r = await client.get(ref_url, timeout=10)
+                    if r.status_code == 200:
+                        arr = np.frombuffer(r.content, np.uint8)
+                        ref_img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+            except Exception:
+                pass
+
+        checklist = set_config.get('checklist', [])
+        
+        result = verify_tray_v3(test_image, ref_img, checklist)
+        
+        response = {
+            'status': result.get('status', 'ERROR'),
+            'confidence': result.get('confidence', 0),
+            'items': result.get('items', []),
+            'missing': result.get('missing', []),
+            'extra': result.get('extra', []),
+            'reason': result.get('reason', ''),
+            'model_used': result.get('model_used', ''),
+            'elapsed_sec': result.get('elapsed_sec', 0),
+            'warnings': [w.model_dump() for w in DEFAULT_WARNINGS],
+            'tray_preview': _encode_image(test_image),
+            'debug': {
+                'sent_checklist': checklist,
+            },
+        }
+
+        # Log to database
+        try:
+            await db.log_verification({
+                'set_id': set_id,
+                'status': response['status'],
+                'confidence': response['confidence'],
+                'model_used': response['model_used'],
+                'elapsed_sec': response['elapsed_sec'],
+                'vlm_response': json.dumps(result, ensure_ascii=False),
+            })
+        except Exception:
+            pass
+            
+        return response
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(500, f'Internal error: {str(e)[:200]}')
+
 
 # ── Sets CRUD ──
 
@@ -360,6 +429,23 @@ async def delete_set(set_id: str):
     if not ok:
         raise HTTPException(500, 'Delete failed')
     return {'ok': True}
+
+@app.post('/api/sets/{set_id}/reference-image')
+async def api_upload_reference(set_id: str, payload: dict):
+    image_b64 = payload.get('image_base64', '')
+    if not image_b64:
+        raise HTTPException(400, 'image_base64 required')
+    try:
+        import base64
+        if ',' in image_b64:
+            image_b64 = image_b64.split(',', 1)[1]
+        img_bytes = base64.b64decode(image_b64)
+        url = await db.upload_reference_image(set_id, img_bytes)
+        return {'success': True, 'url': url}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(500, f'Upload failed: {str(e)[:200]}')
 
 
 # ── Auth & Dashboard ──

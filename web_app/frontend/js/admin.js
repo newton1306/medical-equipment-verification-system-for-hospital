@@ -236,3 +236,88 @@ async function deleteSet(id) {
 }
 
 document.addEventListener('DOMContentLoaded', loadSets);
+
+// --- Admin Webcam & Capture Logic ---
+let adminWebcamStream = null;
+let adminCapturedBase64 = null;
+
+async function openAdminWebcam() {
+    const container = document.getElementById('admin-webcam-container');
+    const video = document.getElementById('admin-webcam-video');
+    const canvas = document.getElementById('admin-webcam-canvas');
+    const btnCapture = document.getElementById('btn-admin-capture');
+    const btnUpload = document.getElementById('btn-admin-upload');
+
+    container.classList.remove('hidden');
+    video.classList.remove('hidden');
+    canvas.classList.add('hidden');
+    btnCapture.classList.remove('hidden');
+    btnUpload.classList.add('hidden');
+    adminCapturedBase64 = null;
+
+    try {
+        adminWebcamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = adminWebcamStream;
+    } catch (err) {
+        alert('Could not access camera: ' + err.message);
+    }
+}
+
+function closeAdminWebcam() {
+    if (adminWebcamStream) {
+        adminWebcamStream.getTracks().forEach(track => track.stop());
+        adminWebcamStream = null;
+    }
+    document.getElementById('admin-webcam-container').classList.add('hidden');
+}
+
+function captureAdminReference() {
+    const video = document.getElementById('admin-webcam-video');
+    const canvas = document.getElementById('admin-webcam-canvas');
+    const btnCapture = document.getElementById('btn-admin-capture');
+    const btnUpload = document.getElementById('btn-admin-upload');
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    
+    adminCapturedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
+    video.classList.add('hidden');
+    canvas.classList.remove('hidden');
+    btnCapture.classList.add('hidden');
+    btnUpload.classList.remove('hidden');
+}
+
+async function uploadAdminReference() {
+    const setId = document.getElementById('f-id').value.trim();
+    if (!setId) {
+        alert('Please fill out the Set ID first before uploading an image.');
+        return;
+    }
+    if (!adminCapturedBase64) return;
+
+    const btnUpload = document.getElementById('btn-admin-upload');
+    const originalText = btnUpload.innerHTML;
+    btnUpload.innerHTML = 'Uploading...';
+    btnUpload.disabled = true;
+
+    try {
+        const res = await apiFetch(`${API}/api/sets/${setId}/reference-image`, {
+            method: 'POST',
+            body: JSON.stringify({ image_base64: adminCapturedBase64 })
+        });
+        
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Upload failed');
+        
+        document.getElementById('f-ref-url').value = data.url;
+        alert('Reference image uploaded successfully!');
+        closeAdminWebcam();
+    } catch (e) {
+        alert('Error uploading image: ' + e.message);
+    } finally {
+        btnUpload.innerHTML = originalText;
+        btnUpload.disabled = false;
+    }
+}
