@@ -8,23 +8,17 @@ import numpy as np
 import cv2
 import google.generativeai as genai
 from backend.config import GEMINI_API_KEY, GEMINI_MODEL_PRO
+from PIL import Image as PILImage
 
 genai.configure(api_key=GEMINI_API_KEY)
 # For V3, we strictly use the PRO model for complex dual-image reasoning
 model = genai.GenerativeModel(GEMINI_MODEL_PRO)
 
+def _bgr_to_pil(img: np.ndarray) -> PILImage.Image:
+    return PILImage.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+
 def verify_tray_v3(test_image: np.ndarray, reference_image: np.ndarray, checklist: list) -> dict:
     start_t = time.time()
-    
-    # 1. Encode Images to JPEG Base64
-    def _encode(img):
-        _, buf = cv2.imencode('.jpg', img, [cv2.IMWRITE_JPEG_QUALITY, 85])
-        return base64.b64encode(buf).decode('utf-8')
-        
-    test_image_part = {
-        "mime_type": "image/jpeg",
-        "data": _encode(test_image)
-    }
     
     # If reference image is missing, we fallback to single image, but ideally it is present
     contents = []
@@ -44,15 +38,11 @@ def verify_tray_v3(test_image: np.ndarray, reference_image: np.ndarray, checklis
     contents.append(prompt)
     
     if reference_image is not None:
-        reference_image_part = {
-            "mime_type": "image/jpeg",
-            "data": _encode(reference_image)
-        }
         contents.append("Reference Ground Truth / ภาพเซ็ตที่ถูกต้องสมบูรณ์:")
-        contents.append(reference_image_part)
+        contents.append(_bgr_to_pil(reference_image))
         
     contents.append("Test Image / ภาพที่ต้องการทดสอบ:")
-    contents.append(test_image_part)
+    contents.append(_bgr_to_pil(test_image))
     
     try:
         response = model.generate_content(
