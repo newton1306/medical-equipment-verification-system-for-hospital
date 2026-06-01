@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Gemini VLM verification — multi-crop + tiered model strategy (from V3)."""
+"""Gemini VLM verification — multi-crop + tiered model strategy for Version 1."""
 
 import json
 import time
@@ -28,18 +28,23 @@ SYSTEM_PROMPT = (
     '- Mayo scissors vs Metzenbaum: blade thickness differs\n'
     '- Handle sizes: #3 (thin) vs #4 (thick)\n\n'
     'RULES:\n'
-    '1. You receive MULTIPLE images:\n'
-    '   - Close-up views of each tray compartment (for detail)\n'
-    '   - Full tray overview\n'
-    '   - Reference image of the correct complete set (if available)\n'
+    '1. You receive ONE OR MORE images:\n'
+    '   - Full tray overview (can be rectangular, circular, mesh basket, etc.)\n'
+    '   - Optional close-up views of tray compartments (if available)\n'
+    '   - Optional reference image of the correct complete set\n'
     '2. Items are placed FREELY - positions vary, focus on TYPE and COUNT.\n'
     '3. Checklist modes:\n'
     '   - [EXACT]: quantity must match precisely\n'
     '   - [PRESENT]: item just needs to exist, any quantity OK\n'
     '4. For cotton balls and gauze: just verify they EXIST. Do NOT count.\n'
-    '5. For metal instruments: verify EXACT count and CORRECT TYPE.\n\n'
+    '5. For metal instruments: verify EXACT count and CORRECT TYPE.\n'
+    '6. **CHAIN OF THOUGHT (CoT)**: You must analyze the image systematically. In the "thought_process" field, '
+    'write down your step-by-step visual counting. Identify each instrument, its visual characteristics, '
+    'and state its location. Count out loud (e.g., "1. I observe 1 curved Mayo scissors in the center... 2. I observe 1 toothed forceps on the left..."). '
+    'Then compare the total counts against the checklist.\n\n'
     'OUTPUT: ONLY raw JSON (no markdown, no code fences):\n'
     '{\n'
+    '  "thought_process": "your step-by-step visual observations, counting, and logic",\n'
     '  "status": "PASS" | "FAIL" | "UNCERTAIN",\n'
     '  "confidence": 0-100,\n'
     '  "items": [\n'
@@ -125,6 +130,7 @@ def call_vlm(
             raw = resp.text
             cleaned = _strip_fences(raw)
             result = json.loads(cleaned)
+            result.setdefault('thought_process', '')
             result.setdefault('status', 'UNCERTAIN')
             result.setdefault('confidence', 0)
             result.setdefault('items', [])
@@ -165,7 +171,7 @@ def verify_with_vlm(
     reference_img: np.ndarray | None,
     checklist: list[dict],
 ) -> dict:
-    """Tiered verification: Flash first, escalate to Pro if uncertain."""
+    """Tiered verification for V1: Flash first, escalate to Pro if uncertain."""
     result = call_vlm(compartments, reference_img, checklist, GEMINI_MODEL_FAST)
 
     if (result.get('status') == 'UNCERTAIN'

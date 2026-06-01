@@ -80,14 +80,36 @@ window.setVersion = function(v) {
     const tabV1 = document.getElementById('tab-v1');
     const tabV2 = document.getElementById('tab-v2');
     if (activeVersion === 1) {
-        tabV1.classList.add('active');
-        tabV2.classList.remove('active');
+        if (tabV1) tabV1.classList.add('active');
+        if (tabV2) tabV2.classList.remove('active');
     } else {
-        tabV2.classList.add('active');
-        tabV1.classList.remove('active');
+        if (tabV2) tabV2.classList.add('active');
+        if (tabV1) tabV1.classList.remove('active');
+    }
+    
+    // Update the version pill in the nav bar
+    const pill = document.getElementById('btn-version-pill');
+    if (pill) {
+        pill.innerHTML = activeVersion === 2 ? '✨ V2: ภาพเต็ม' : '✂️ V1: 3 ช่อง';
     }
     
     updateVersionUI();
+}
+
+window.selectLandingVersion = function(v) {
+    setVersion(v);
+    sessionStorage.setItem('version_selected', v);
+    const overlay = document.getElementById('version-landing-overlay');
+    if (overlay) {
+        overlay.classList.add('hidden');
+    }
+}
+
+window.showVersionSelector = function() {
+    const overlay = document.getElementById('version-landing-overlay');
+    if (overlay) {
+        overlay.classList.remove('hidden');
+    }
 }
 
 function updateVersionUI() {
@@ -116,7 +138,10 @@ function updateVersionUI() {
 
 // ── Init ──
 async function init() {
-    updateVersionUI();
+    // Read and restore version selection
+    const savedVersion = parseInt(sessionStorage.getItem('version_selected') || '2');
+    setVersion(savedVersion);
+    
     try {
         const res = await apiFetch(API + '/api/sets');
         sets = await res.json();
@@ -124,6 +149,11 @@ async function init() {
             throw new Error(sets.detail || 'Invalid response from server');
         }
         renderSetSelector();
+        
+        // Show landing animation overlay if version hasn't been selected yet this session
+        if (!sessionStorage.getItem('version_selected')) {
+            showVersionSelector();
+        }
     } catch (e) {
         if (e.message !== 'Unauthorized') {
             console.error('Failed to load sets:', e);

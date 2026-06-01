@@ -172,6 +172,7 @@ def extract_manual_compartments(tray_image: np.ndarray, vert_x: int, horiz_y: in
     compartments['full'] = tray_image.copy()
     return compartments
 
+
 def process_tray_image(image: np.ndarray) -> tuple[np.ndarray, dict[str, np.ndarray], int, int, str]:
     """Full pipeline: detect tray → crop → split compartments.
 

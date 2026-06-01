@@ -17,10 +17,15 @@ from fastapi.responses import FileResponse
 from backend.config import ALLOWED_ORIGINS, APP_PASSWORD
 from backend.models import DEFAULT_WARNINGS, VerifyResponse, Warning
 from backend import database as db
-from backend.services.tray_detector import (
-    process_tray_image, stage1_sanity_check,
+# V1 imports (Legacy Crop & Split)
+from backend.services.v1.tray_detector import (
+    process_tray_image, stage1_sanity_check, crop_tray, extract_manual_compartments
 )
-from backend.services.vlm_verifier import verify_with_vlm
+from backend.services.v1.vlm_verifier import verify_with_vlm as verify_with_vlm_v1
+
+# V2 imports (Smart V2)
+from backend.services.v2.sanity_checker import check_full_image_sanity as stage1_sanity_check_v2
+from backend.services.v2.vlm_verifier import verify_with_vlm as verify_with_vlm_v2
 
 app = FastAPI(title='Surgical Instrument Verification', version='4.0')
 
@@ -74,7 +79,7 @@ def api_detect_boundary(payload: dict):
         
     try:
         image = _decode_image(image_b64)
-        from backend.services.tray_detector import detect_tray
+        from backend.services.v1.tray_detector import detect_tray
         import numpy as np
         
         corners = detect_tray(image)
@@ -106,7 +111,7 @@ async def detect_tray_preview(payload: dict):
 
     try:
         image = _decode_image(image_b64)
-        from backend.services.tray_detector import detect_tray, crop_tray, split_compartments
+        from backend.services.v1.tray_detector import detect_tray, crop_tray, split_compartments
         import numpy as np
         
         corners_input = payload.get('corners')
@@ -179,7 +184,7 @@ async def verify_tray(payload: dict):
     try:
         # Decode image
         image = _decode_image(image_b64)
-        from backend.services.tray_detector import process_tray_image, crop_tray, extract_manual_compartments
+        from backend.services.v1.tray_detector import process_tray_image, crop_tray, extract_manual_compartments
         import numpy as np
 
         corners = payload.get('corners')
@@ -194,12 +199,7 @@ async def verify_tray(payload: dict):
             method = 'full_image_direct'
             vx, hy = 0, 0
             
-            # Simple sanity check for full image (low contrast/dark)
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            if gray.std() < 12:
-                s1 = 'EMPTY_TRAY'
-            else:
-                s1 = 'SEND_TO_VLM'
+            s1 = stage1_sanity_check_v2(image)
         elif payload.get('skip_crop') or payload.get('skip_split'):
             if corners:
                 corners_arr = np.array(corners, dtype=int)
@@ -268,8 +268,12 @@ async def verify_tray(payload: dict):
                     pass  # Continue without reference
 
             # Step 4: Stage 2 VLM verification
-            print(f'[VLM] Sending {len(compartments)} compartments, checklist: {checklist}')
-            result = verify_with_vlm(compartments, ref_img, checklist)
+            if version == 2:
+                print(f'[VLM V2] Sending full image, checklist: {checklist}')
+                result = verify_with_vlm_v2(tray, ref_img, checklist)
+            else:
+                print(f'[VLM V1] Sending {len(compartments)} compartments, checklist: {checklist}')
+                result = verify_with_vlm_v1(compartments, ref_img, checklist)
             print(f'[VLM] Result: {json.dumps(result, ensure_ascii=False)[:500]}')
 
         # Build compartment previews

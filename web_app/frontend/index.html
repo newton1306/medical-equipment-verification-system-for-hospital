@@ -25,12 +25,55 @@
         </div>
     </div>
 
+    <!-- Version Selection Landing Overlay -->
+    <div id="version-landing-overlay" class="version-landing-overlay hidden">
+        <div class="version-landing-container">
+            <h1 class="version-landing-title">🏥 Surgical Verify System</h1>
+            <p class="version-landing-subtitle">กรุณาเลือกเทคโนโลยีปัญญาประดิษฐ์ (AI) ในการตรวจสอบเครื่องมือแพทย์</p>
+            
+            <div class="version-landing-cards">
+                <!-- Version 2 Card -->
+                <div class="version-landing-card v2" onclick="selectLandingVersion(2)">
+                    <span class="card-badge">แนะนำ (Recommended)</span>
+                    <div class="card-header">
+                        <span class="card-icon">✨</span>
+                        <div class="card-title">V2: Smart Full-Image AI<br><small style="font-size:0.75rem;font-weight:normal;opacity:0.8;">ภาพเต็มความแม่นยำสูง</small></div>
+                    </div>
+                    <p class="card-description">วิเคราะห์ถาดเครื่องมือแพทย์ทั้งใบโดยตรงโดยไม่ต้องครอปตัดแบ่งช่อง รองรับทุกรูปทรง</p>
+                    <ul class="card-bullets">
+                        <li><b>ประมวลผลเร็วสูงสุด:</b> วิเคราะห์เสร็จสิ้นภายใน 3-5 วินาที</li>
+                        <li><b>ถาดทุกรูปทรง:</b> รองรับทรงกลม ตะแกรงสแตนเลส หรือตะกร้าตาข่าย</li>
+                        <li><b>Chain of Thought:</b> คิดอย่างเป็นขั้นตอน แสดงเหตุผลการนับในระบบ Debug</li>
+                        <li><b>ขั้นตอนลดรูป:</b> ไม่ต้องเสียเวลาจัดตำแหน่ง ครอบมุม หรือลากพิกัดเส้นแบ่ง</li>
+                    </ul>
+                    <button class="btn-card-select">ใช้งานรุ่นแนะนำ V2</button>
+                </div>
+                
+                <!-- Version 1 Card -->
+                <div class="version-landing-card" onclick="selectLandingVersion(1)">
+                    <div class="card-header" style="margin-top:28px;">
+                        <span class="card-icon">✂️</span>
+                        <div class="card-title">V1: Compartment Crop & Split<br><small style="font-size:0.75rem;font-weight:normal;opacity:0.8;">ระบบดั้งเดิม 3 ช่องย่อย</small></div>
+                    </div>
+                    <p class="card-description">อัลกอริทึมตัดขอบถาดสแตนเลสและแบ่งส่วนออกเป็น 3 ส่วนแนวตั้งส่งไปให้ AI ประมวลผลทีละช่อง</p>
+                    <ul class="card-bullets">
+                        <li><b>เหมาะสำหรับ:</b> ถาดมาตรฐานที่ออกแบบแบ่ง 3 ส่วนชัดเจน</li>
+                        <li><b>การแยกภาพ:</b> ตรวจจับวิเคราะห์อุปกรณ์แยกตามช่องย่อย</li>
+                        <li><b>ต้องตั้งค่า:</b> ผู้ใช้ต้องลากจัดมุมกลม 4 ทิศ และปรับพิกัดเส้นประ</li>
+                    </ul>
+                    <button class="btn-card-select">ใช้งานรุ่นดั้งเดิม V1</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <nav class="nav">
         <div class="nav-brand">🏥 Equipment Verify</div>
-        <div class="nav-links">
+        <div class="nav-links" style="display: flex; align-items: center; gap: 12px;">
             <a href="/" class="nav-link active">ตรวจสอบ</a>
             <a href="/admin" class="nav-link">จัดการ Set</a>
             <a href="/dashboard" class="nav-link">Dashboard</a>
+            <button id="btn-version-pill" class="btn-version-pill" onclick="showVersionSelector()">✨ V2: ภาพเต็ม</button>
         </div>
     </nav>
 
