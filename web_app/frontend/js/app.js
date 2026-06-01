@@ -87,14 +87,32 @@ window.setVersion = function(v) {
         if (tabV1) tabV1.classList.remove('active');
     }
     
-    // Update the version pill in the nav bar
+    // Update the version pill in the nav bar dynamically based on screen width
     const pill = document.getElementById('btn-version-pill');
     if (pill) {
-        pill.innerHTML = activeVersion === 2 ? '✨ V2: ภาพเต็ม' : '✂️ V1: 3 ช่อง';
+        const isSmallScreen = window.innerWidth < 600;
+        if (activeVersion === 2) {
+            pill.innerHTML = isSmallScreen ? '✨ V2' : '✨ V2: ภาพเต็ม';
+        } else {
+            pill.innerHTML = isSmallScreen ? '✂️ V1' : '✂️ V1: 3 ช่อง';
+        }
     }
     
     updateVersionUI();
 }
+
+// Keep the nav version pill text responsive to window resize
+window.addEventListener('resize', () => {
+    const pill = document.getElementById('btn-version-pill');
+    if (pill) {
+        const isSmallScreen = window.innerWidth < 600;
+        if (activeVersion === 2) {
+            pill.innerHTML = isSmallScreen ? '✨ V2' : '✨ V2: ภาพเต็ม';
+        } else {
+            pill.innerHTML = isSmallScreen ? '✂️ V1' : '✂️ V1: 3 ช่อง';
+        }
+    }
+});
 
 window.selectLandingVersion = function(v) {
     setVersion(v);
@@ -150,10 +168,8 @@ async function init() {
         }
         renderSetSelector();
         
-        // Show landing animation overlay if version hasn't been selected yet this session
-        if (!sessionStorage.getItem('version_selected')) {
-            showVersionSelector();
-        }
+        // Always show the version selection overlay with landing animation on every page load/refresh
+        showVersionSelector();
     } catch (e) {
         if (e.message !== 'Unauthorized') {
             console.error('Failed to load sets:', e);
