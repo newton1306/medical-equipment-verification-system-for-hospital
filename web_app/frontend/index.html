@@ -32,6 +32,9 @@
             <p class="text-muted mb-4">Choose the verification engine that suits your current tray format.</p>
             
             <div style="display:flex; flex-direction:column; gap:1rem;">
+                <button class="btn btn-primary btn-large" style="white-space: normal; line-height: 1.4; background-color: var(--pass);" onclick="selectLandingVersion(4)">
+                    V4: Left Tray Guide + Crop
+                </button>
                 <button class="btn btn-primary btn-large" style="white-space: normal; line-height: 1.4; background-color: var(--pass);" onclick="selectLandingVersion(3)">
                     V3: AR-Guided Packing (New!)
                 </button>
@@ -60,6 +63,7 @@
 
         <!-- Hidden Version Selector Tabs (Used by JS) -->
         <div class="hidden" style="display: none;">
+            <button id="tab-v4" onclick="setVersion(4)"></button>
             <button id="tab-v3" onclick="setVersion(3)"></button>
             <button id="tab-v2" onclick="setVersion(2)"></button>
             <button id="tab-v1" onclick="setVersion(1)"></button>
@@ -107,6 +111,13 @@
             </div>
 
             <div id="webcam-container" class="media-container hidden mt-4" style="position: relative;">
+                <aside id="v4-tray-guide" class="v4-tray-guide hidden" aria-label="Reference tray guide">
+                    <img id="v4-guide-image" src="" alt="Reference tray">
+                    <div class="v4-guide-list">
+                        <div class="v4-guide-title">Reference Items</div>
+                        <ol id="v4-guide-items"></ol>
+                    </div>
+                </aside>
                 <video id="webcam-video" autoplay playsinline></video>
                 <img id="ar-overlay-image" class="hidden" src="" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0.4; pointer-events: none; z-index: 10;">
                 <div class="media-actions" style="padding: 1rem; justify-content: center; background: #fff; border-top: 1px solid var(--border); position: relative; z-index: 20;">
@@ -123,6 +134,7 @@
                 <p id="preview-hint-text" class="text-small text-muted mt-4 text-center">Drag the four corners to frame the tray precisely.</p>
                 <div class="flex-row mt-4">
                     <button class="btn btn-outline flex-1" id="btn-retake">Retake</button>
+                    <button class="btn btn-outline flex-1 hidden" id="btn-rotate-crop">Rotate 90</button>
                     <button class="btn btn-outline flex-1" id="btn-detect">Split (V1)</button>
                 </div>
                 <button class="btn btn-primary btn-large mt-4" id="btn-verify-direct">Verify Entire Tray</button>

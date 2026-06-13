@@ -163,6 +163,73 @@ function updateVersionUI() {
 
 
 // ── Init ──
+function updateVersionPill() {
+    const pill = document.getElementById('btn-version-pill');
+    if (!pill) return;
+
+    const isSmallScreen = window.innerWidth < 600;
+    const labels = {
+        4: isSmallScreen ? 'V4' : 'V4: Left guide',
+        3: isSmallScreen ? 'V3' : 'V3: AR guide',
+        2: isSmallScreen ? 'V2' : 'V2: Full image',
+        1: isSmallScreen ? 'V1' : 'V1: 3 compartments'
+    };
+    pill.textContent = labels[activeVersion] || labels[2];
+}
+
+window.setVersion = function(v) {
+    activeVersion = v;
+    [1, 2, 3, 4].forEach(version => {
+        const tab = document.getElementById(`tab-v${version}`);
+        if (tab) tab.classList.toggle('active', activeVersion === version);
+    });
+    updateVersionPill();
+    updateVersionUI();
+}
+
+window.addEventListener('resize', updateVersionPill);
+
+function updateVersionUI() {
+    const btnDetect = document.getElementById('btn-detect');
+    const btnVerifyDirect = document.getElementById('btn-verify-direct');
+    const btnRotateCrop = document.getElementById('btn-rotate-crop');
+    const bCanvas = document.getElementById('boundary-canvas');
+    const previewHintText = document.getElementById('preview-hint-text');
+
+    if (!previewHintText) return;
+
+    if (btnRotateCrop) {
+        btnRotateCrop.classList.toggle('hidden', activeVersion !== 4);
+        btnRotateCrop.textContent = `Rotate 90 (${cropRotation}°)`;
+    }
+
+    if (activeVersion === 4) {
+        btnDetect.classList.add('hidden');
+        bCanvas.classList.remove('hidden');
+        previewHintText.innerHTML = '<b>Version 4:</b> Crop only the tray area, then rotate until the tray is vertical before verifying.';
+        btnVerifyDirect.innerHTML = 'Confirm crop & verify';
+        btnVerifyDirect.style.backgroundColor = '';
+    } else if (activeVersion === 3) {
+        btnDetect.classList.add('hidden');
+        bCanvas.classList.add('hidden');
+        previewHintText.innerHTML = '<b>Version 3:</b> Use the AR reference image to align this tray before checking.';
+        btnVerifyDirect.innerHTML = 'Verify with reference';
+        btnVerifyDirect.style.backgroundColor = '';
+    } else if (activeVersion === 2) {
+        btnDetect.classList.add('hidden');
+        bCanvas.classList.add('hidden');
+        previewHintText.innerHTML = '<b>Version 2:</b> Send the full image directly to AI without tray shape limits.';
+        btnVerifyDirect.innerHTML = 'Verify full image';
+        btnVerifyDirect.style.backgroundColor = '';
+    } else {
+        btnDetect.classList.remove('hidden');
+        bCanvas.classList.remove('hidden');
+        previewHintText.innerHTML = 'Drag the four green corner points to crop the stainless tray.';
+        btnVerifyDirect.innerHTML = 'Verify entire tray';
+        btnVerifyDirect.style.backgroundColor = '';
+    }
+}
+
 async function init() {
     // Read and restore version selection
     const savedVersion = parseInt(sessionStorage.getItem('version_selected') || '2');
@@ -268,6 +335,7 @@ const bCtx = bCanvas ? bCanvas.getContext('2d') : null;
 
 async function showPreview(src) {
     previewImage.src = src;
+    cropRotation = 0;
     
     // Reset UI
     stepTrayPreview.classList.add('hidden');
@@ -419,6 +487,59 @@ function resizeImage(dataUrl, maxSize, callback) {
 }
 
 // ── Webcam (for desktop) ──
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
+
+function getChecklistLabel(item) {
+    const names = [item.item_name, item.item_name_th].filter(Boolean).join(' / ');
+    if (item.mode === 'exact' && item.quantity) return `${item.quantity}x ${names}`;
+    return names;
+}
+
+function updateV4TrayGuide() {
+    const webcamContainer = document.getElementById('webcam-container');
+    const guide = document.getElementById('v4-tray-guide');
+    const guideImage = document.getElementById('v4-guide-image');
+    const guideItems = document.getElementById('v4-guide-items');
+    const arOverlay = document.getElementById('ar-overlay-image');
+    if (!webcamContainer || !guide || !guideImage || !guideItems || !arOverlay) return;
+
+    const showGuide = activeVersion === 4;
+    webcamContainer.classList.toggle('v4-guide-active', showGuide);
+    guide.classList.toggle('hidden', !showGuide);
+
+    if (!showGuide) {
+        guideImage.removeAttribute('src');
+        guideItems.innerHTML = '';
+        return;
+    }
+
+    arOverlay.classList.add('hidden');
+    arOverlay.src = '';
+
+    if (selectedSet && selectedSet.reference_image_url) {
+        guideImage.src = selectedSet.reference_image_url;
+        guideImage.alt = `${selectedSet.display_name || 'Reference'} tray`;
+        guideImage.classList.remove('hidden');
+    } else {
+        guideImage.removeAttribute('src');
+        guideImage.alt = 'No reference image available';
+        guideImage.classList.add('hidden');
+    }
+
+    const items = selectedSet?.checklist || [];
+    guideItems.innerHTML = items.length
+        ? items.map(item => `<li>${escapeHtml(getChecklistLabel(item))}</li>`).join('')
+        : '<li>No checklist items</li>';
+}
+
 async function startWebcam() {
     // Check if browser allows webcam access (requires HTTPS or Localhost)
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -433,18 +554,18 @@ async function startWebcam() {
         const video = document.getElementById('webcam-video');
         video.srcObject = webcamStream;
     
-    // Set AR Ghosting Overlay if available
-    const arOverlay = document.getElementById('ar-overlay-image');
-    if (selectedSet && selectedSet.reference_image_url) {
-        arOverlay.src = selectedSet.reference_image_url;
-        arOverlay.classList.remove('hidden');
-    } else {
-        arOverlay.classList.add('hidden');
-        arOverlay.src = '';
-    }
-    
-    document.getElementById('webcam-container').classList.remove('hidden');
-    document.getElementById('capture-options').classList.add('hidden');
+        const arOverlay = document.getElementById('ar-overlay-image');
+        if (activeVersion === 3 && selectedSet && selectedSet.reference_image_url) {
+            arOverlay.src = selectedSet.reference_image_url;
+            arOverlay.classList.remove('hidden');
+        } else {
+            arOverlay.classList.add('hidden');
+            arOverlay.src = '';
+        }
+
+        updateV4TrayGuide();
+        document.getElementById('webcam-container').classList.remove('hidden');
+        document.getElementById('capture-options').classList.add('hidden');
     } catch (e) {
         alert('ไม่สามารถเปิดเว็บแคมได้: ' + e.message + '\nกรุณาใช้ปุ่มเลือกรูปหรือกล้องมือถือแทนครับ');
     }
@@ -455,7 +576,10 @@ function stopWebcam() {
         webcamStream.getTracks().forEach(t => t.stop());
         webcamStream = null;
     }
-    document.getElementById('webcam-container').classList.add('hidden');
+    const webcamContainer = document.getElementById('webcam-container');
+    webcamContainer.classList.add('hidden');
+    webcamContainer.classList.remove('v4-guide-active');
+    document.getElementById('v4-tray-guide').classList.add('hidden');
     document.getElementById('capture-options').classList.remove('hidden');
 }
 
@@ -478,7 +602,10 @@ function resetCapture() {
         webcamStream.getTracks().forEach(t => t.stop());
         webcamStream = null;
     }
-    document.getElementById('webcam-container').classList.add('hidden');
+    const webcamContainer = document.getElementById('webcam-container');
+    webcamContainer.classList.add('hidden');
+    webcamContainer.classList.remove('v4-guide-active');
+    document.getElementById('v4-tray-guide').classList.add('hidden');
     document.getElementById('ar-overlay-image').classList.add('hidden');
     document.getElementById('capture-options').classList.remove('hidden');
     capturedImageBase64 = null;
@@ -650,8 +777,23 @@ if (btnRotateTray) {
     });
 }
 
+const btnRotateCrop = document.getElementById('btn-rotate-crop');
+if (btnRotateCrop) {
+    btnRotateCrop.addEventListener('click', () => {
+        cropRotation = (cropRotation + 90) % 360;
+        updateVersionUI();
+    });
+}
+
 btnVerifyDirect.addEventListener('click', async () => {
     if (!selectedSet || !capturedImageBase64) return;
+    const corners = getOriginalCorners();
+
+    if (activeVersion === 4 && !corners) {
+        alert('Please crop the tray area before verifying with Version 4.');
+        return;
+    }
+
     previewContainer.classList.add('hidden');
     document.getElementById('capture-options').classList.add('hidden');
     
@@ -687,8 +829,8 @@ btnVerifyDirect.addEventListener('click', async () => {
         set_id: selectedSet.id,
         image_base64: capturedImageBase64,
         skip_split: true,
-        corners: getOriginalCorners(),
-        rotate_crop: 0,
+        corners: corners,
+        rotate_crop: activeVersion === 4 ? cropRotation : 0,
         version: activeVersion
     };
     

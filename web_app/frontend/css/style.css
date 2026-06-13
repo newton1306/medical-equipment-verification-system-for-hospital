@@ -372,6 +372,13 @@ select.form-input {
     border: 1px solid var(--border);
 }
 
+.media-container.v4-guide-active {
+    display: grid;
+    grid-template-columns: minmax(160px, min(40vw, 260px)) minmax(0, 1fr);
+    align-items: stretch;
+    background-color: var(--bg-surface);
+}
+
 .media-container video, .media-container img {
     display: block;
     width: 100%;
@@ -380,10 +387,70 @@ select.form-input {
     object-fit: contain;
 }
 
+.media-container.v4-guide-active video {
+    height: 100%;
+    max-height: 68vh;
+    background-color: #000;
+}
+
+.v4-tray-guide {
+    width: 100%;
+    max-width: min(40vw, 260px);
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background-color: var(--bg-surface);
+    border-right: 1px solid var(--border-strong);
+    opacity: 1;
+    overflow: hidden;
+}
+
+.v4-tray-guide img {
+    width: 100%;
+    max-height: 38vh;
+    object-fit: contain;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background-color: #000;
+}
+
+.v4-guide-list {
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.v4-guide-title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--ink-primary);
+    margin-bottom: 0.5rem;
+}
+
+.v4-guide-list ol {
+    list-style-position: inside;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.v4-guide-list li {
+    font-size: 0.8125rem;
+    line-height: 1.35;
+    color: var(--ink-primary);
+    overflow-wrap: anywhere;
+}
+
 .media-actions {
     display: flex;
     gap: 1rem;
     margin-top: 1rem;
+}
+
+.media-container.v4-guide-active .media-actions {
+    grid-column: 1 / -1;
+    margin-top: 0;
 }
 
 /* Boundary Editor */
@@ -392,6 +459,25 @@ select.form-input {
     top: 0; left: 0;
     width: 100%; height: 100%;
     touch-action: none;
+}
+
+@media (max-width: 640px) {
+    .media-container.v4-guide-active {
+        grid-template-columns: minmax(112px, 40vw) minmax(0, 1fr);
+    }
+
+    .v4-tray-guide {
+        max-width: 40vw;
+        padding: 0.5rem;
+    }
+
+    .v4-tray-guide img {
+        max-height: 28vh;
+    }
+
+    .v4-guide-list li {
+        font-size: 0.75rem;
+    }
 }
 
 /* ── Loader ── */
