@@ -429,10 +429,11 @@ select.form-input {
 }
 
 .v4-guide-list ol {
-    list-style-position: inside;
+    list-style-position: outside;
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
+    padding-left: 1.5rem;
 }
 
 .v4-guide-list li {
@@ -440,6 +441,7 @@ select.form-input {
     line-height: 1.35;
     color: var(--ink-primary);
     overflow-wrap: anywhere;
+    padding-left: 0.15rem;
 }
 
 .media-actions {
@@ -481,6 +483,34 @@ select.form-input {
 }
 
 /* ── Loader ── */
+.admin-reference-capture {
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    background: #000;
+    text-align: center;
+}
+
+.admin-reference-capture video,
+.admin-reference-capture canvas {
+    width: 100%;
+    max-height: 420px;
+    object-fit: contain;
+}
+
+.admin-reference-capture canvas {
+    cursor: crosshair;
+    touch-action: none;
+    background: #000;
+}
+
+#admin-crop-hint {
+    max-width: none;
+    margin: 0.75rem auto 0;
+    color: var(--ink-inverse);
+}
+
 .loader-wrapper {
     display: flex;
     flex-direction: column;

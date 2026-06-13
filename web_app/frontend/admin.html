@@ -58,12 +58,14 @@
                 </div>
             </div>
 
-            <div id="admin-webcam-container" class="hidden" style="margin-bottom: 1.25rem; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem; background: #000; text-align: center;">
-                <video id="admin-webcam-video" autoplay playsinline style="width: 100%; max-height: 300px;"></video>
-                <canvas id="admin-webcam-canvas" class="hidden" style="width: 100%; max-height: 300px; object-fit: contain;"></canvas>
-                <div style="margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: center;">
+            <div id="admin-webcam-container" class="hidden admin-reference-capture">
+                <video id="admin-webcam-video" autoplay playsinline></video>
+                <canvas id="admin-webcam-canvas" class="hidden"></canvas>
+                <p id="admin-crop-hint" class="text-small hidden">Crop เฉพาะพื้นที่ถาด และหมุนภาพให้เป็นแนวตั้งก่อนอัปโหลด</p>
+                <div style="margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
                     <button id="btn-admin-capture" class="btn btn-primary" type="button" onclick="captureAdminReference()">📸 ถ่ายภาพ</button>
-                    <button id="btn-admin-upload" class="btn btn-primary hidden" style="background-color: var(--pass);" type="button" onclick="uploadAdminReference()">☁️ อัปโหลดไป Supabase</button>
+                    <button id="btn-admin-rotate" class="btn btn-outline hidden" type="button" onclick="rotateAdminReference()" style="background: var(--bg-surface);">Rotate 90</button>
+                    <button id="btn-admin-upload" class="btn btn-primary hidden" style="background-color: var(--pass);" type="button" onclick="uploadAdminReference()">☁️ อัปโหลดภาพที่ crop แล้ว</button>
                     <button class="btn btn-outline" type="button" onclick="closeAdminWebcam()" style="background: var(--bg-surface);">ปิดกล้อง</button>
                 </div>
             </div>

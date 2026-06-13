@@ -193,21 +193,26 @@ function updateVersionUI() {
     const btnDetect = document.getElementById('btn-detect');
     const btnVerifyDirect = document.getElementById('btn-verify-direct');
     const btnRotateCrop = document.getElementById('btn-rotate-crop');
+    const btnWebcamCapture = document.getElementById('btn-webcam-capture');
     const bCanvas = document.getElementById('boundary-canvas');
     const previewHintText = document.getElementById('preview-hint-text');
 
     if (!previewHintText) return;
 
     if (btnRotateCrop) {
-        btnRotateCrop.classList.toggle('hidden', activeVersion !== 4);
+        btnRotateCrop.classList.add('hidden');
         btnRotateCrop.textContent = `Rotate 90 (${cropRotation}°)`;
+    }
+
+    if (btnWebcamCapture) {
+        btnWebcamCapture.textContent = activeVersion === 4 ? 'ตรวจสอบอีกครั้งด้วย AI' : 'Capture';
     }
 
     if (activeVersion === 4) {
         btnDetect.classList.add('hidden');
-        bCanvas.classList.remove('hidden');
-        previewHintText.innerHTML = '<b>Version 4:</b> Crop only the tray area, then rotate until the tray is vertical before verifying.';
-        btnVerifyDirect.innerHTML = 'Confirm crop & verify';
+        bCanvas.classList.add('hidden');
+        previewHintText.innerHTML = '<b>Version 4:</b> ตรวจสอบด้วย AI จากภาพเต็ม โดยใช้ reference tray ด้านซ้ายเป็นแนวทางการจัดถาด';
+        btnVerifyDirect.innerHTML = 'ตรวจสอบอีกครั้งด้วย AI';
         btnVerifyDirect.style.backgroundColor = '';
     } else if (activeVersion === 3) {
         btnDetect.classList.add('hidden');
@@ -344,8 +349,8 @@ async function showPreview(src) {
     
     updateVersionUI();
     
-    if (activeVersion === 2 || activeVersion === 3) {
-        // Version 2/3 Bypass: Show preview immediately without detect_boundary wait
+    if (activeVersion === 2 || activeVersion === 3 || activeVersion === 4) {
+        // Direct engines bypass boundary detection in the verification flow.
         previewContainer.classList.remove('hidden');
         boundaryOriginalSize = null;
         displayCorners = null;
@@ -583,7 +588,7 @@ function stopWebcam() {
     document.getElementById('capture-options').classList.remove('hidden');
 }
 
-function captureWebcam() {
+async function captureWebcam() {
     const video = document.getElementById('webcam-video');
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
@@ -591,6 +596,18 @@ function captureWebcam() {
     canvas.getContext('2d').drawImage(video, 0, 0);
     capturedImageBase64 = canvas.toDataURL('image/jpeg', 0.85);
     stopWebcam();
+
+    if (activeVersion === 4) {
+        await executeVerify({
+            set_id: selectedSet.id,
+            image_base64: capturedImageBase64,
+            skip_split: true,
+            rotate_crop: 0,
+            version: 4
+        });
+        return;
+    }
+
     showPreview(capturedImageBase64);
 }
 
@@ -789,11 +806,6 @@ btnVerifyDirect.addEventListener('click', async () => {
     if (!selectedSet || !capturedImageBase64) return;
     const corners = getOriginalCorners();
 
-    if (activeVersion === 4 && !corners) {
-        alert('Please crop the tray area before verifying with Version 4.');
-        return;
-    }
-
     previewContainer.classList.add('hidden');
     document.getElementById('capture-options').classList.add('hidden');
     
@@ -829,8 +841,8 @@ btnVerifyDirect.addEventListener('click', async () => {
         set_id: selectedSet.id,
         image_base64: capturedImageBase64,
         skip_split: true,
-        corners: corners,
-        rotate_crop: activeVersion === 4 ? cropRotation : 0,
+        corners: activeVersion === 4 ? null : corners,
+        rotate_crop: 0,
         version: activeVersion
     };
     

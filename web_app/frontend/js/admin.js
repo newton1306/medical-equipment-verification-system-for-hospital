@@ -240,6 +240,180 @@ document.addEventListener('DOMContentLoaded', loadSets);
 // --- Admin Webcam & Capture Logic ---
 let adminWebcamStream = null;
 let adminCapturedBase64 = null;
+let adminCropState = null;
+let adminCropDrag = null;
+
+function getAdminCanvasPoint(e) {
+    const canvas = document.getElementById('admin-webcam-canvas');
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+        x: (clientX - rect.left) * (canvas.width / rect.width),
+        y: (clientY - rect.top) * (canvas.height / rect.height)
+    };
+}
+
+function getAdminOrientedSize() {
+    if (!adminCropState?.image) return { w: 0, h: 0 };
+    const img = adminCropState.image;
+    return adminCropState.rotation % 180 === 0
+        ? { w: img.naturalWidth, h: img.naturalHeight }
+        : { w: img.naturalHeight, h: img.naturalWidth };
+}
+
+function drawImageWithRotation(ctx, img, width, height, rotation) {
+    ctx.save();
+    if (rotation === 90) {
+        ctx.translate(width, 0);
+        ctx.rotate(Math.PI / 2);
+        ctx.drawImage(img, 0, 0, height, width);
+    } else if (rotation === 180) {
+        ctx.translate(width, height);
+        ctx.rotate(Math.PI);
+        ctx.drawImage(img, 0, 0, width, height);
+    } else if (rotation === 270) {
+        ctx.translate(0, height);
+        ctx.rotate(-Math.PI / 2);
+        ctx.drawImage(img, 0, 0, height, width);
+    } else {
+        ctx.drawImage(img, 0, 0, width, height);
+    }
+    ctx.restore();
+}
+
+function renderAdminCropCanvas() {
+    if (!adminCropState?.image) return;
+    const canvas = document.getElementById('admin-webcam-canvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('admin-webcam-container');
+    const size = getAdminOrientedSize();
+    const maxWidth = Math.min(720, container.clientWidth - 32 || 720);
+    canvas.width = Math.max(240, Math.round(maxWidth));
+    canvas.height = Math.max(180, Math.round(canvas.width * (size.h / size.w)));
+
+    if (!adminCropState.rect) {
+        const padX = canvas.width * 0.08;
+        const padY = canvas.height * 0.08;
+        adminCropState.rect = {
+            x: padX,
+            y: padY,
+            w: canvas.width - (padX * 2),
+            h: canvas.height - (padY * 2)
+        };
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawImageWithRotation(ctx, adminCropState.image, canvas.width, canvas.height, adminCropState.rotation);
+
+    const r = adminCropState.rect;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(r.x, r.y, r.w, r.h);
+    ctx.strokeStyle = '#00ff88';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(r.x, r.y, r.w, r.h);
+    ctx.fillStyle = '#ffffff';
+    for (const p of getAdminCropHandles()) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function getAdminCropHandles() {
+    if (!adminCropState?.rect) return [];
+    const r = adminCropState.rect;
+    return [
+        { id: 'nw', x: r.x, y: r.y },
+        { id: 'ne', x: r.x + r.w, y: r.y },
+        { id: 'sw', x: r.x, y: r.y + r.h },
+        { id: 'se', x: r.x + r.w, y: r.y + r.h }
+    ];
+}
+
+function clampAdminCropRect() {
+    const r = adminCropState.rect;
+    const canvas = document.getElementById('admin-webcam-canvas');
+    const minSize = 40;
+    r.x = Math.max(0, Math.min(r.x, canvas.width - minSize));
+    r.y = Math.max(0, Math.min(r.y, canvas.height - minSize));
+    r.w = Math.max(minSize, Math.min(r.w, canvas.width - r.x));
+    r.h = Math.max(minSize, Math.min(r.h, canvas.height - r.y));
+}
+
+function startAdminCropDrag(e) {
+    if (!adminCropState?.rect) return;
+    e.preventDefault();
+    const p = getAdminCanvasPoint(e);
+    const handle = getAdminCropHandles().find(h => Math.hypot(h.x - p.x, h.y - p.y) < 24);
+    const r = adminCropState.rect;
+    const inside = p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+    if (!handle && !inside) return;
+    adminCropDrag = {
+        mode: handle?.id || 'move',
+        start: p,
+        rect: { ...r }
+    };
+}
+
+function moveAdminCropDrag(e) {
+    if (!adminCropDrag || !adminCropState?.rect) return;
+    e.preventDefault();
+    const p = getAdminCanvasPoint(e);
+    const dx = p.x - adminCropDrag.start.x;
+    const dy = p.y - adminCropDrag.start.y;
+    const r0 = adminCropDrag.rect;
+    const r = adminCropState.rect;
+
+    if (adminCropDrag.mode === 'move') {
+        r.x = r0.x + dx;
+        r.y = r0.y + dy;
+    } else {
+        const left = adminCropDrag.mode.includes('w') ? r0.x + dx : r0.x;
+        const top = adminCropDrag.mode.includes('n') ? r0.y + dy : r0.y;
+        const right = adminCropDrag.mode.includes('e') ? r0.x + r0.w + dx : r0.x + r0.w;
+        const bottom = adminCropDrag.mode.includes('s') ? r0.y + r0.h + dy : r0.y + r0.h;
+        r.x = Math.min(left, right);
+        r.y = Math.min(top, bottom);
+        r.w = Math.abs(right - left);
+        r.h = Math.abs(bottom - top);
+    }
+
+    clampAdminCropRect();
+    renderAdminCropCanvas();
+}
+
+function stopAdminCropDrag() {
+    adminCropDrag = null;
+}
+
+function buildAdminCroppedImage() {
+    if (!adminCropState?.image || !adminCropState?.rect) return adminCapturedBase64;
+    const canvas = document.getElementById('admin-webcam-canvas');
+    const size = getAdminOrientedSize();
+    const oriented = document.createElement('canvas');
+    oriented.width = size.w;
+    oriented.height = size.h;
+    drawImageWithRotation(oriented.getContext('2d'), adminCropState.image, size.w, size.h, adminCropState.rotation);
+
+    const scaleX = size.w / canvas.width;
+    const scaleY = size.h / canvas.height;
+    const r = adminCropState.rect;
+    const sx = Math.max(0, Math.round(r.x * scaleX));
+    const sy = Math.max(0, Math.round(r.y * scaleY));
+    const sw = Math.min(size.w - sx, Math.round(r.w * scaleX));
+    const sh = Math.min(size.h - sy, Math.round(r.h * scaleY));
+
+    const cropped = document.createElement('canvas');
+    cropped.width = sw;
+    cropped.height = sh;
+    cropped.getContext('2d').drawImage(oriented, sx, sy, sw, sh, 0, 0, sw, sh);
+    return cropped.toDataURL('image/jpeg', 0.9);
+}
 
 async function openAdminWebcam() {
     const container = document.getElementById('admin-webcam-container');
@@ -247,13 +421,19 @@ async function openAdminWebcam() {
     const canvas = document.getElementById('admin-webcam-canvas');
     const btnCapture = document.getElementById('btn-admin-capture');
     const btnUpload = document.getElementById('btn-admin-upload');
+    const btnRotate = document.getElementById('btn-admin-rotate');
+    const cropHint = document.getElementById('admin-crop-hint');
 
     container.classList.remove('hidden');
     video.classList.remove('hidden');
     canvas.classList.add('hidden');
     btnCapture.classList.remove('hidden');
     btnUpload.classList.add('hidden');
+    btnRotate.classList.add('hidden');
+    cropHint.classList.add('hidden');
     adminCapturedBase64 = null;
+    adminCropState = null;
+    adminCropDrag = null;
 
     try {
         adminWebcamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
@@ -269,6 +449,8 @@ function closeAdminWebcam() {
         adminWebcamStream = null;
     }
     document.getElementById('admin-webcam-container').classList.add('hidden');
+    adminCropState = null;
+    adminCropDrag = null;
 }
 
 function captureAdminReference() {
@@ -276,6 +458,8 @@ function captureAdminReference() {
     const canvas = document.getElementById('admin-webcam-canvas');
     const btnCapture = document.getElementById('btn-admin-capture');
     const btnUpload = document.getElementById('btn-admin-upload');
+    const btnRotate = document.getElementById('btn-admin-rotate');
+    const cropHint = document.getElementById('admin-crop-hint');
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -283,10 +467,31 @@ function captureAdminReference() {
     
     adminCapturedBase64 = canvas.toDataURL('image/jpeg', 0.85);
 
+    if (adminWebcamStream) {
+        adminWebcamStream.getTracks().forEach(track => track.stop());
+        adminWebcamStream = null;
+    }
+
     video.classList.add('hidden');
     canvas.classList.remove('hidden');
     btnCapture.classList.add('hidden');
+    btnRotate.classList.remove('hidden');
     btnUpload.classList.remove('hidden');
+    cropHint.classList.remove('hidden');
+
+    const img = new Image();
+    img.onload = () => {
+        adminCropState = { image: img, rotation: 0, rect: null };
+        renderAdminCropCanvas();
+    };
+    img.src = adminCapturedBase64;
+}
+
+function rotateAdminReference() {
+    if (!adminCropState) return;
+    adminCropState.rotation = (adminCropState.rotation + 90) % 360;
+    adminCropState.rect = null;
+    renderAdminCropCanvas();
 }
 
 async function uploadAdminReference() {
@@ -296,6 +501,7 @@ async function uploadAdminReference() {
         return;
     }
     if (!adminCapturedBase64) return;
+    const croppedBase64 = buildAdminCroppedImage();
 
     const btnUpload = document.getElementById('btn-admin-upload');
     const originalText = btnUpload.innerHTML;
@@ -305,7 +511,7 @@ async function uploadAdminReference() {
     try {
         const res = await apiFetch(`${API}/api/sets/${setId}/reference-image`, {
             method: 'POST',
-            body: JSON.stringify({ image_base64: adminCapturedBase64 })
+            body: JSON.stringify({ image_base64: croppedBase64 })
         });
         
         const data = await res.json();
@@ -320,4 +526,14 @@ async function uploadAdminReference() {
         btnUpload.innerHTML = originalText;
         btnUpload.disabled = false;
     }
+}
+
+const adminCropCanvas = document.getElementById('admin-webcam-canvas');
+if (adminCropCanvas) {
+    adminCropCanvas.addEventListener('mousedown', startAdminCropDrag);
+    adminCropCanvas.addEventListener('mousemove', moveAdminCropDrag);
+    window.addEventListener('mouseup', stopAdminCropDrag);
+    adminCropCanvas.addEventListener('touchstart', startAdminCropDrag, { passive: false });
+    adminCropCanvas.addEventListener('touchmove', moveAdminCropDrag, { passive: false });
+    window.addEventListener('touchend', stopAdminCropDrag);
 }
