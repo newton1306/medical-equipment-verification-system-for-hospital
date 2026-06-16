@@ -10,6 +10,9 @@ let selectedSet = null;
 let capturedImageBase64 = null;
 let webcamStream = null;
 let isMobileMode = false;
+let trayData = null;
+let currentDividers = null;
+let cropRotation = 0;
 
 // DOM
 const checklistPreview = document.getElementById('checklist-preview');
@@ -525,11 +528,6 @@ function getOriginalCorners() {
         Math.round(c.y * scaleY)
     ]);
 }
-
-// Tray State
-let trayData = null;
-let currentDividers = null;
-let cropRotation = 0;
 
 async function doDetectTray() {
     previewContainer.classList.add('hidden');
