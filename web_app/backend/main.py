@@ -15,22 +15,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from backend.config import ALLOWED_ORIGINS, APP_PASSWORD
-from backend.models import DEFAULT_WARNINGS, VerifyResponse, Warning
+from backend.models import DEFAULT_WARNINGS
 from backend import database as db
-# V1 imports (Legacy Crop & Split)
 from backend.services.v1.tray_detector import (
-    process_tray_image, stage1_sanity_check, crop_tray, extract_manual_compartments
+    stage1_sanity_check, crop_tray
 )
-from backend.services.v1.vlm_verifier import verify_with_vlm as verify_with_vlm_v1
+from backend.services.v1.vlm_verifier import verify_with_vlm
 
-# V2 imports (Smart V2)
-from backend.services.v2.sanity_checker import check_full_image_sanity as stage1_sanity_check_v2
-from backend.services.v2.vlm_verifier import verify_with_vlm as verify_with_vlm_v2
-
-# V3 imports (AR-Guided Dual-Image)
-from backend.services.v3.vlm_verifier import verify_tray_v3
-
-app = FastAPI(title='Surgical Instrument Verification', version='4.0')
+app = FastAPI(title='Surgical Instrument Verification')
 
 @app.middleware("http")
 async def check_password(request, call_next):
@@ -187,64 +179,28 @@ async def verify_tray(payload: dict):
     try:
         # Decode image
         image = _decode_image(image_b64)
-        from backend.services.v1.tray_detector import process_tray_image, crop_tray, extract_manual_compartments
         import numpy as np
 
         corners = payload.get('corners')
-        manual_dividers = payload.get('manual_dividers')
-        
-        # Step 1: Detect tray + split compartments
-        version = int(payload.get('version', 1))
-
-        if version == 2:
-            tray = image
-            compartments = {'full': image}
-            method = 'full_image_direct'
-            vx, hy = 0, 0
-            
-            s1 = stage1_sanity_check_v2(image)
-        elif payload.get('skip_crop') or payload.get('skip_split'):
-            if corners:
-                corners_arr = np.array(corners, dtype=int)
-                tray = crop_tray(image, corners_arr)
-            else:
-                tray = image
-                
-            rotate_angle = int(payload.get('rotate_crop', 0))
-            if rotate_angle:
-                if rotate_angle == 90:
-                    tray = cv2.rotate(tray, cv2.ROTATE_90_CLOCKWISE)
-                elif rotate_angle == 180:
-                    tray = cv2.rotate(tray, cv2.ROTATE_180)
-                elif rotate_angle == 270:
-                    tray = cv2.rotate(tray, cv2.ROTATE_90_COUNTERCLOCKWISE)
-
-            compartments = {'full': tray}
-            method = 'skip_split'
-            vx, hy = 0, 0
-            s1 = stage1_sanity_check(tray, compartments)
-        elif corners and manual_dividers:
-            # Validate and use manual coordinates
+        if corners:
             corners_arr = np.array(corners, dtype=int)
             tray = crop_tray(image, corners_arr)
-            
-            rotate_angle = int(payload.get('rotate_crop', 0))
-            if rotate_angle:
-                if rotate_angle == 90:
-                    tray = cv2.rotate(tray, cv2.ROTATE_90_CLOCKWISE)
-                elif rotate_angle == 180:
-                    tray = cv2.rotate(tray, cv2.ROTATE_180)
-                elif rotate_angle == 270:
-                    tray = cv2.rotate(tray, cv2.ROTATE_90_COUNTERCLOCKWISE)
-
-            vx = max(5, min(tray.shape[1]-5, int(manual_dividers.get('vert_x', tray.shape[1]//2))))
-            hy = max(5, min(tray.shape[0]-5, int(manual_dividers.get('horiz_y', tray.shape[0]//2))))
-            compartments = extract_manual_compartments(tray, vx, hy)
-            method = 'manual'
-            s1 = stage1_sanity_check(tray, compartments)
+            method = 'cropped_full_image'
         else:
-            tray, compartments, vx, hy, method = process_tray_image(image)
-            s1 = stage1_sanity_check(tray, compartments)
+            tray = image
+            method = 'full_image_reference'
+
+        rotate_angle = int(payload.get('rotate_crop', 0))
+        if rotate_angle:
+            if rotate_angle == 90:
+                tray = cv2.rotate(tray, cv2.ROTATE_90_CLOCKWISE)
+            elif rotate_angle == 180:
+                tray = cv2.rotate(tray, cv2.ROTATE_180)
+            elif rotate_angle == 270:
+                tray = cv2.rotate(tray, cv2.ROTATE_90_COUNTERCLOCKWISE)
+
+        compartments = {'full': tray}
+        s1 = stage1_sanity_check(tray, compartments)
 
         checklist = set_config.get('checklist', [])
 
@@ -270,13 +226,8 @@ async def verify_tray(payload: dict):
                 except Exception:
                     pass  # Continue without reference
 
-            # Step 4: Stage 2 VLM verification
-            if version == 2:
-                print(f'[VLM V2] Sending full image, checklist: {checklist}')
-                result = verify_with_vlm_v2(tray, ref_img, checklist)
-            else:
-                print(f'[VLM V1] Sending {len(compartments)} compartments, checklist: {checklist}')
-                result = verify_with_vlm_v1(compartments, ref_img, checklist)
+            print(f'[VLM] Sending full-image tray, checklist: {checklist}')
+            result = verify_with_vlm(compartments, ref_img, checklist)
             print(f'[VLM] Result: {json.dumps(result, ensure_ascii=False)[:500]}')
 
         # Build compartment previews
@@ -301,7 +252,7 @@ async def verify_tray(payload: dict):
                 'stage1': s1,
                 'detection_method': method,
                 'sent_checklist': checklist,
-                'n_compartments': len([k for k in compartments if k != 'full']),
+                'n_compartments': 0,
                 'thought_process': result.get('thought_process', ''),
             },
         }
@@ -323,79 +274,6 @@ async def verify_tray(payload: dict):
 
     except ValueError as e:
         raise HTTPException(422, str(e))
-    except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(500, f'Internal error: {str(e)[:200]}')
-
-from fastapi import Request
-
-@app.post('/api/v3/verify-tray')
-async def verify_tray_v3_endpoint(request: Request):
-    try:
-        payload = await request.json()
-    except Exception:
-        raise HTTPException(400, 'Invalid JSON payload')
-        
-    set_id = payload.get('set_id', '')
-    test_image_b64 = payload.get('test_image_base64', '')
-    
-    if not set_id or not test_image_b64:
-        raise HTTPException(400, 'set_id and test_image_base64 required')
-
-    set_config = await db.get_set(set_id)
-    if set_config is None:
-        raise HTTPException(404, f'Set not found: {set_id}')
-        
-    try:
-        test_image = _decode_image(test_image_b64)
-        
-        ref_img = None
-        ref_url = set_config.get('reference_image_url', '')
-        if ref_url:
-            try:
-                import httpx
-                async with httpx.AsyncClient() as client:
-                    r = await client.get(ref_url, timeout=10)
-                    if r.status_code == 200:
-                        arr = np.frombuffer(r.content, np.uint8)
-                        ref_img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
-            except Exception:
-                pass
-
-        checklist = set_config.get('checklist', [])
-        
-        result = verify_tray_v3(test_image, ref_img, checklist)
-        
-        response = {
-            'status': result.get('status', 'ERROR'),
-            'confidence': result.get('confidence', 0),
-            'items': result.get('items', []),
-            'missing': result.get('missing', []),
-            'extra': result.get('extra', []),
-            'reason': result.get('reason', ''),
-            'model_used': result.get('model_used', ''),
-            'elapsed_sec': result.get('elapsed_sec', 0),
-            'warnings': [w.model_dump() for w in DEFAULT_WARNINGS],
-            'tray_preview': _encode_image(test_image),
-            'debug': {
-                'sent_checklist': checklist,
-            },
-        }
-
-        # Log to database
-        try:
-            await db.log_verification({
-                'set_id': set_id,
-                'status': response['status'],
-                'confidence': response['confidence'],
-                'model_used': response['model_used'],
-                'elapsed_sec': response['elapsed_sec'],
-                'vlm_response': json.dumps(result, ensure_ascii=False),
-            })
-        except Exception:
-            pass
-            
-        return response
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(500, f'Internal error: {str(e)[:200]}')

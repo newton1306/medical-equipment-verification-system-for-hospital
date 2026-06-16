@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Gemini VLM verification — multi-crop + tiered model strategy for Version 1."""
+"""Gemini VLM verification with tiered model fallback."""
 
 import json
 import time
@@ -171,7 +171,7 @@ def verify_with_vlm(
     reference_img: np.ndarray | None,
     checklist: list[dict],
 ) -> dict:
-    """Tiered verification for V1: Flash first, escalate to Pro if uncertain."""
+    """Tiered verification: Flash first, escalate to Pro if uncertain."""
     result = call_vlm(compartments, reference_img, checklist, GEMINI_MODEL_FAST)
 
     if (result.get('status') == 'UNCERTAIN'

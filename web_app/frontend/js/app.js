@@ -9,13 +9,16 @@ let sets = [];
 let selectedSet = null;
 let capturedImageBase64 = null;
 let webcamStream = null;
-let activeVersion = 2; // Default is Version 2
+let isMobileMode = false;
 
 // DOM
 const checklistPreview = document.getElementById('checklist-preview');
 const stepSelect = document.getElementById('step-select');
 const stepCapture = document.getElementById('step-capture');
-const stepTrayPreview = document.getElementById('step-tray-preview');
+const stepTrayPreview = document.getElementById('step-tray-preview') || {
+    classList: { add() {}, remove() {} },
+    scrollIntoView() {}
+};
 const stepProcessing = document.getElementById('step-processing');
 const stepResults = document.getElementById('step-results');
 const mobileCameraInput = document.getElementById('mobile-camera-input');
@@ -28,6 +31,10 @@ const btnVerifyDirect = document.getElementById('btn-verify-direct');
 const btnVerify = document.getElementById('btn-verify');
 const btnNext = document.getElementById('btn-next');
 const processingStatus = document.getElementById('processing-status');
+const mobileReferencePanel = document.getElementById('mobile-reference-panel');
+const mobileReferenceImage = document.getElementById('mobile-reference-image');
+const mobileReferenceItems = document.getElementById('mobile-reference-items');
+const btnMobileAiCapture = document.getElementById('btn-mobile-ai-capture');
 
 // Auth
 let appPassword = localStorage.getItem('appPw') || '';
@@ -73,123 +80,52 @@ btnLogin.addEventListener('click', async () => {
     }
 });
 
-// ── Version Selection ──
-window.setVersion = function(v) {
-    activeVersion = v;
-    
-    const tabV1 = document.getElementById('tab-v1');
-    const tabV2 = document.getElementById('tab-v2');
-    if (activeVersion === 1) {
-        if (tabV1) tabV1.classList.add('active');
-        if (tabV2) tabV2.classList.remove('active');
+// ── Device Mode ──
+function detectMobileMode() {
+    const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches;
+    const narrowScreen = window.matchMedia?.('(max-width: 768px)').matches;
+    const mobileUa = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    return Boolean(mobileUa || (coarsePointer && narrowScreen));
+}
+
+function applyDeviceModeUI() {
+    isMobileMode = detectMobileMode();
+    document.body.classList.toggle('mobile-mode', isMobileMode);
+
+    const captureOptions = document.getElementById('capture-options');
+    if (isMobileMode && selectedSet) {
+        captureOptions.classList.add('hidden');
+        mobileReferencePanel.classList.remove('hidden');
+        updateMobileReferencePanel();
     } else {
-        if (tabV2) tabV2.classList.add('active');
-        if (tabV1) tabV1.classList.remove('active');
+        captureOptions.classList.remove('hidden');
+        mobileReferencePanel.classList.add('hidden');
     }
-    
-    // Update the version pill in the nav bar dynamically based on screen width
-    const pill = document.getElementById('btn-version-pill');
-    if (pill) {
-        const isSmallScreen = window.innerWidth < 600;
-        if (activeVersion === 2) {
-            pill.innerHTML = isSmallScreen ? '✨ V2' : '✨ V2: ภาพเต็ม';
-        } else {
-            pill.innerHTML = isSmallScreen ? '✂️ V1' : '✂️ V1: 3 ช่อง';
-        }
-    }
-    
-    updateVersionUI();
+    updateModeUI();
 }
 
-// Keep the nav version pill text responsive to window resize
-window.addEventListener('resize', () => {
-    const pill = document.getElementById('btn-version-pill');
-    if (pill) {
-        const isSmallScreen = window.innerWidth < 600;
-        if (activeVersion === 2) {
-            pill.innerHTML = isSmallScreen ? '✨ V2' : '✨ V2: ภาพเต็ม';
-        } else {
-            pill.innerHTML = isSmallScreen ? '✂️ V1' : '✂️ V1: 3 ช่อง';
-        }
-    }
-});
+function updateMobileReferencePanel() {
+    if (!mobileReferencePanel || !selectedSet) return;
 
-window.selectLandingVersion = function(v) {
-    setVersion(v);
-    sessionStorage.setItem('version_selected', v);
-    const overlay = document.getElementById('version-landing-overlay');
-    if (overlay) {
-        overlay.classList.add('hidden');
-    }
-}
-
-window.showVersionSelector = function() {
-    const overlay = document.getElementById('version-landing-overlay');
-    if (overlay) {
-        overlay.classList.remove('hidden');
-    }
-}
-
-function updateVersionUI() {
-    const btnDetect = document.getElementById('btn-detect');
-    const btnVerifyDirect = document.getElementById('btn-verify-direct');
-    const bCanvas = document.getElementById('boundary-canvas');
-    const previewHintText = document.getElementById('preview-hint-text');
-    const btnVersionPill = document.getElementById('btn-version-pill');
-    
-    if (!previewHintText) return;
-    
-    if (activeVersion === 3) {
-        btnDetect.classList.add('hidden');
-        bCanvas.classList.add('hidden');
-        previewHintText.innerHTML = '✨ <b>เวอร์ชัน 3:</b> ใช้ระบบ AR ซ้อนภาพต้นฉบับเพื่อความแม่นยำสูงสุด';
-        btnVerifyDirect.innerHTML = '⚡ ตรวจสอบแบบ Dual-Image';
-        btnVerifyDirect.style.backgroundColor = '';
-        btnVersionPill.innerHTML = '✨ V3';
-    } else if (activeVersion === 2) {
-        btnDetect.classList.add('hidden');
-        bCanvas.classList.add('hidden');
-        previewHintText.innerHTML = '✨ <b>เวอร์ชัน 2 (แนะนำ):</b> ระบบจะส่งรูปภาพเต็มใบความละเอียดสูงไปให้ AI ตรวจสอบโดยตรง (ไม่จำกัดรูปทรงถาด)';
-        btnVerifyDirect.innerHTML = '⚡ ตรวจสอบเต็มรูปทันที';
-        btnVerifyDirect.style.backgroundColor = '';
+    if (selectedSet.reference_image_url) {
+        mobileReferenceImage.src = selectedSet.reference_image_url;
+        mobileReferenceImage.alt = `${selectedSet.display_name || 'Reference'} tray`;
+        mobileReferenceImage.classList.remove('hidden');
     } else {
-        btnDetect.classList.remove('hidden');
-        bCanvas.classList.remove('hidden');
-        previewHintText.innerHTML = 'ลากจุดกลมสีเขียวทั้ง 4 มุม เพื่อครอบขอบถาดสแตนเลสให้พอดี';
-        btnVerifyDirect.innerHTML = '⚡ ตรวจสอบทันที (ส่งทั้งถาดจบงาน)';
-        btnVerifyDirect.style.backgroundColor = '';
+        mobileReferenceImage.removeAttribute('src');
+        mobileReferenceImage.alt = 'No reference image available';
+        mobileReferenceImage.classList.add('hidden');
     }
+
+    const items = selectedSet.checklist || [];
+    mobileReferenceItems.innerHTML = items.length
+        ? items.map(item => `<li>${escapeHtml(getChecklistLabel(item))}</li>`).join('')
+        : '<li>No checklist items</li>';
 }
 
+window.addEventListener('resize', applyDeviceModeUI);
 
-// ── Init ──
-function updateVersionPill() {
-    const pill = document.getElementById('btn-version-pill');
-    if (!pill) return;
-
-    const isSmallScreen = window.innerWidth < 600;
-    const labels = {
-        4: isSmallScreen ? 'V4' : 'V4: Left guide',
-        3: isSmallScreen ? 'V3' : 'V3: AR guide',
-        2: isSmallScreen ? 'V2' : 'V2: Full image',
-        1: isSmallScreen ? 'V1' : 'V1: 3 compartments'
-    };
-    pill.textContent = labels[activeVersion] || labels[2];
-}
-
-window.setVersion = function(v) {
-    activeVersion = v;
-    [1, 2, 3, 4].forEach(version => {
-        const tab = document.getElementById(`tab-v${version}`);
-        if (tab) tab.classList.toggle('active', activeVersion === version);
-    });
-    updateVersionPill();
-    updateVersionUI();
-}
-
-window.addEventListener('resize', updateVersionPill);
-
-function updateVersionUI() {
+function updateModeUI() {
     const btnDetect = document.getElementById('btn-detect');
     const btnVerifyDirect = document.getElementById('btn-verify-direct');
     const btnRotateCrop = document.getElementById('btn-rotate-crop');
@@ -204,41 +140,18 @@ function updateVersionUI() {
         btnRotateCrop.textContent = `Rotate 90 (${cropRotation}°)`;
     }
 
-    if (btnWebcamCapture) {
-        btnWebcamCapture.textContent = activeVersion === 4 ? 'ตรวจสอบอีกครั้งด้วย AI' : 'Capture';
-    }
-
-    if (activeVersion === 4) {
-        btnDetect.classList.add('hidden');
-        bCanvas.classList.add('hidden');
-        previewHintText.innerHTML = '<b>Version 4:</b> ตรวจสอบด้วย AI จากภาพเต็ม โดยใช้ reference tray ด้านซ้ายเป็นแนวทางการจัดถาด';
-        btnVerifyDirect.innerHTML = 'ตรวจสอบอีกครั้งด้วย AI';
-        btnVerifyDirect.style.backgroundColor = '';
-    } else if (activeVersion === 3) {
-        btnDetect.classList.add('hidden');
-        bCanvas.classList.add('hidden');
-        previewHintText.innerHTML = '<b>Version 3:</b> Use the AR reference image to align this tray before checking.';
-        btnVerifyDirect.innerHTML = 'Verify with reference';
-        btnVerifyDirect.style.backgroundColor = '';
-    } else if (activeVersion === 2) {
-        btnDetect.classList.add('hidden');
-        bCanvas.classList.add('hidden');
-        previewHintText.innerHTML = '<b>Version 2:</b> Send the full image directly to AI without tray shape limits.';
-        btnVerifyDirect.innerHTML = 'Verify full image';
-        btnVerifyDirect.style.backgroundColor = '';
-    } else {
-        btnDetect.classList.remove('hidden');
-        bCanvas.classList.remove('hidden');
-        previewHintText.innerHTML = 'Drag the four green corner points to crop the stainless tray.';
-        btnVerifyDirect.innerHTML = 'Verify entire tray';
-        btnVerifyDirect.style.backgroundColor = '';
-    }
+    if (btnWebcamCapture) btnWebcamCapture.textContent = 'ตรวจสอบอีกครั้งด้วย AI';
+    if (btnDetect) btnDetect.classList.add('hidden');
+    if (bCanvas) bCanvas.classList.add('hidden');
+    previewHintText.innerHTML = isMobileMode
+        ? 'ตรวจสอบด้วย AI จากภาพที่ถ่าย โดยเทียบกับ checklist และภาพ reference'
+        : 'ตรวจสอบด้วย AI จากภาพเต็ม โดยใช้ reference tray ด้านซ้ายเป็นแนวทางการจัดถาด';
+    btnVerifyDirect.innerHTML = 'ตรวจสอบอีกครั้งด้วย AI';
+    btnVerifyDirect.style.backgroundColor = '';
 }
 
 async function init() {
-    // Read and restore version selection
-    const savedVersion = parseInt(sessionStorage.getItem('version_selected') || '2');
-    setVersion(savedVersion);
+    applyDeviceModeUI();
     
     try {
         const res = await apiFetch(API + '/api/sets');
@@ -247,9 +160,6 @@ async function init() {
             throw new Error(sets.detail || 'Invalid response from server');
         }
         renderSetSelector();
-        
-        // Always show the version selection overlay with landing animation on every page load/refresh
-        showVersionSelector();
     } catch (e) {
         if (e.message !== 'Unauthorized') {
             console.error('Failed to load sets:', e);
@@ -296,6 +206,7 @@ function renderSetSelector() {
             renderChecklist();
             stepCapture.classList.remove('hidden');
             resetCapture();
+            applyDeviceModeUI();
             // Scroll to capture section
             stepCapture.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
@@ -323,6 +234,14 @@ function handleFileInput(e) {
     reader.onload = (ev) => {
         resizeImage(ev.target.result, 1920, (resized) => {
             capturedImageBase64 = resized;
+            if (isMobileMode) {
+                executeVerify({
+                    set_id: selectedSet.id,
+                    image_base64: capturedImageBase64,
+                    skip_split: true
+                });
+                return;
+            }
             showPreview(resized);
         });
     };
@@ -332,6 +251,12 @@ function handleFileInput(e) {
 
 mobileCameraInput.addEventListener('change', handleFileInput);
 fileUploadInput.addEventListener('change', handleFileInput);
+if (btnMobileAiCapture) {
+    btnMobileAiCapture.addEventListener('click', () => {
+        if (!selectedSet) return;
+        mobileCameraInput.click();
+    });
+}
 
 let boundaryOriginalSize = null;
 let displayCorners = null;
@@ -347,53 +272,13 @@ async function showPreview(src) {
     document.getElementById('capture-options').classList.add('hidden');
     document.getElementById('webcam-container').classList.add('hidden');
     
-    updateVersionUI();
+    updateModeUI();
     
-    if (activeVersion === 2 || activeVersion === 3 || activeVersion === 4) {
-        // Direct engines bypass boundary detection in the verification flow.
-        previewContainer.classList.remove('hidden');
-        boundaryOriginalSize = null;
-        displayCorners = null;
-        return;
-    }
+    previewContainer.classList.remove('hidden');
+    boundaryOriginalSize = null;
+    displayCorners = null;
+    return;
     
-    stepProcessing.classList.remove('hidden');
-    processingStatus.textContent = 'วิเคราะห์ขอบเขตถาดสแตนเลส...';
-    
-    try {
-        const res = await apiFetch(API + '/api/detect_boundary', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image_base64: src })
-        });
-        const data = await res.json();
-        
-        if (data.success) {
-            boundaryOriginalSize = data.image_size;
-            const finalizePreview = () => {
-                previewContainer.classList.remove('hidden');
-                bCanvas.width = previewImage.clientWidth || previewImage.naturalWidth;
-                bCanvas.height = previewImage.clientHeight || previewImage.naturalHeight;
-                const scaleX = bCanvas.width / boundaryOriginalSize.w;
-                const scaleY = bCanvas.height / boundaryOriginalSize.h;
-                displayCorners = data.corners.map(c => ({ x: c[0] * scaleX, y: c[1] * scaleY }));
-                drawBoundary();
-            };
-
-            if (previewImage.complete && previewImage.naturalWidth !== 0) {
-                finalizePreview();
-            } else {
-                previewImage.onload = finalizePreview;
-            }
-        } else {
-            throw new Error(data.error);
-        }
-    } catch(e) {
-        alert("Detect boundary error: " + e.message);
-        previewContainer.classList.remove('hidden'); // fallback to show it anyway
-    }
-    
-    stepProcessing.classList.add('hidden');
 }
 
 function drawBoundary() {
@@ -508,7 +393,7 @@ function getChecklistLabel(item) {
     return names;
 }
 
-function updateV4TrayGuide() {
+function updateTrayGuide() {
     const webcamContainer = document.getElementById('webcam-container');
     const guide = document.getElementById('v4-tray-guide');
     const guideImage = document.getElementById('v4-guide-image');
@@ -516,7 +401,7 @@ function updateV4TrayGuide() {
     const arOverlay = document.getElementById('ar-overlay-image');
     if (!webcamContainer || !guide || !guideImage || !guideItems || !arOverlay) return;
 
-    const showGuide = activeVersion === 4;
+    const showGuide = true;
     webcamContainer.classList.toggle('v4-guide-active', showGuide);
     guide.classList.toggle('hidden', !showGuide);
 
@@ -560,15 +445,10 @@ async function startWebcam() {
         video.srcObject = webcamStream;
     
         const arOverlay = document.getElementById('ar-overlay-image');
-        if (activeVersion === 3 && selectedSet && selectedSet.reference_image_url) {
-            arOverlay.src = selectedSet.reference_image_url;
-            arOverlay.classList.remove('hidden');
-        } else {
-            arOverlay.classList.add('hidden');
-            arOverlay.src = '';
-        }
+        arOverlay.classList.add('hidden');
+        arOverlay.src = '';
 
-        updateV4TrayGuide();
+        updateTrayGuide();
         document.getElementById('webcam-container').classList.remove('hidden');
         document.getElementById('capture-options').classList.add('hidden');
     } catch (e) {
@@ -585,7 +465,7 @@ function stopWebcam() {
     webcamContainer.classList.add('hidden');
     webcamContainer.classList.remove('v4-guide-active');
     document.getElementById('v4-tray-guide').classList.add('hidden');
-    document.getElementById('capture-options').classList.remove('hidden');
+    applyDeviceModeUI();
 }
 
 async function captureWebcam() {
@@ -597,18 +477,12 @@ async function captureWebcam() {
     capturedImageBase64 = canvas.toDataURL('image/jpeg', 0.85);
     stopWebcam();
 
-    if (activeVersion === 4) {
-        await executeVerify({
-            set_id: selectedSet.id,
-            image_base64: capturedImageBase64,
-            skip_split: true,
-            rotate_crop: 0,
-            version: 4
-        });
-        return;
-    }
-
-    showPreview(capturedImageBase64);
+    await executeVerify({
+        set_id: selectedSet.id,
+        image_base64: capturedImageBase64,
+        skip_split: true,
+        rotate_crop: 0
+    });
 }
 
 // ── Retake ──
@@ -624,7 +498,6 @@ function resetCapture() {
     webcamContainer.classList.remove('v4-guide-active');
     document.getElementById('v4-tray-guide').classList.add('hidden');
     document.getElementById('ar-overlay-image').classList.add('hidden');
-    document.getElementById('capture-options').classList.remove('hidden');
     capturedImageBase64 = null;
     previewContainer.classList.add('hidden');
     mobileCameraInput.value = '';
@@ -632,6 +505,7 @@ function resetCapture() {
     stepTrayPreview.classList.add('hidden');
     stepResults.classList.add('hidden');
     stepProcessing.classList.add('hidden');
+    applyDeviceModeUI();
 }
 
 function backToCapture() {
@@ -731,11 +605,13 @@ async function doDetectTray() {
 }
 
 // ── Option 2: Detect Tray (Split) ──
-btnDetect.addEventListener('click', () => {
-    if (!capturedImageBase64) return;
-    cropRotation = 0; // Reset rotation when entering Option 2
-    doDetectTray();
-});
+if (btnDetect) {
+    btnDetect.addEventListener('click', () => {
+        if (!capturedImageBase64) return;
+        cropRotation = 0;
+        doDetectTray();
+    });
+}
 
 function setupDraggableDividers() {
     const container = document.getElementById('tray-container');
@@ -798,78 +674,39 @@ const btnRotateCrop = document.getElementById('btn-rotate-crop');
 if (btnRotateCrop) {
     btnRotateCrop.addEventListener('click', () => {
         cropRotation = (cropRotation + 90) % 360;
-        updateVersionUI();
+        updateModeUI();
     });
 }
 
 btnVerifyDirect.addEventListener('click', async () => {
     if (!selectedSet || !capturedImageBase64) return;
-    const corners = getOriginalCorners();
 
     previewContainer.classList.add('hidden');
     document.getElementById('capture-options').classList.add('hidden');
-    
-    if (activeVersion === 3) {
-        stepCapture.classList.add('hidden');
-        stepProcessing.classList.remove('hidden');
-        
-        try {
-            const res = await apiFetch(API + '/api/v3/verify-tray', {
-                method: 'POST',
-                body: JSON.stringify({
-                    set_id: selectedSet.id,
-                    test_image_base64: capturedImageBase64
-                })
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                let msg = data.detail || 'Verification failed';
-                if (typeof msg === 'object') msg = JSON.stringify(msg);
-                throw new Error(msg);
-            }
-            renderResults(data);
-        } catch (e) {
-            console.error(e);
-            alert('Error: ' + (e.message || JSON.stringify(e)));
-            resetCapture();
-        }
-        return;
-    }
-    
-    // Direct verification bypasses the option 2 rotation entirely
+
     const payload = {
         set_id: selectedSet.id,
         image_base64: capturedImageBase64,
         skip_split: true,
-        corners: activeVersion === 4 ? null : corners,
-        rotate_crop: 0,
-        version: activeVersion
+        rotate_crop: 0
     };
     
     await executeVerify(payload);
 });
 
 // ── Step 3: Verify with VLM ──
-btnVerify.addEventListener('click', async () => {
-    if (!selectedSet || !capturedImageBase64) return;
-    stepTrayPreview.classList.add('hidden');
-    
-    const payload = {
-        set_id: selectedSet.id,
-        image_base64: capturedImageBase64,
-        rotate_crop: cropRotation,
-        version: 1
-    };
-    if (trayData && trayData.corners) {
-        payload.corners = trayData.corners;
-    } else {
-        const c = getOriginalCorners();
-        if (c) payload.corners = c;
-    }
-    payload.manual_dividers = currentDividers;
-    
-    await executeVerify(payload);
-});
+if (btnVerify) {
+    btnVerify.addEventListener('click', async () => {
+        if (!selectedSet || !capturedImageBase64) return;
+        stepTrayPreview.classList.add('hidden');
+
+        await executeVerify({
+            set_id: selectedSet.id,
+            image_base64: capturedImageBase64,
+            skip_split: true
+        });
+    });
+}
 
 
 async function executeVerify(payload) {

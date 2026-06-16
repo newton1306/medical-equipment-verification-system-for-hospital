@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""OpenCV tray detection and compartment splitting — migrated from V3 notebook."""
+"""OpenCV tray detection and compartment splitting helpers."""
 
 import cv2
 import numpy as np
